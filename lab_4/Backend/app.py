@@ -4,19 +4,33 @@ import connectors
 app = Flask(__name__)
 DEBUG = False
 
-
-""" STUDENTS """
-
 @app.route("/students/get/", methods=["POST"])
 def studentsGet():
-    db = connectors.mysql_conn()
-    cur = db.cursor()
-    
-    cur.execute("SELECT * FROM students")
-    result = cur.fetchall()
-    
-    db.close()
+    result = []
+    # try:
+    #     db = connectors.mysql_conn()
+    #     cur = db.cursor()
+    #     cur.execute("SELECT * FROM students")
+    #     result = cur.fetchall()
+    # finally:
+    #     db.close()
+    #     pass
     return jsonify({"data": result}, 200)
+
+
+@app.route("/groups/get/", methods=["POST"])
+def groupsGet():
+    result = []
+    # db = connectors.mysql_conn()
+    # try:
+    #     cur = db.cursor()
+    #     cur.execute("SELECT * FROM groups")
+    #     result = cur.fetchall()
+    # finally:
+    #     db.close()
+    return jsonify({"data": result}, 200)
+
+
 
 @app.route("/students/getById/", methods=["POST"])
 def studentsGetById():
@@ -93,16 +107,7 @@ def studentsChangeGroup():
     return jsonify(success=True)
 
 
-""" GRUOPS """
 
-@app.route("/groups/get/", methods=["POST"])
-def groupsGet():
-    db = connectors.mysql_conn()
-    cur = db.cursor()
-    cur.execute("SELECT * FROM groups")
-    result = cur.fetchall()
-    db.close()
-    return jsonify({"data": result}, 200)
 
 
 """ SCHEDULE """

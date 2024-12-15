@@ -10,18 +10,12 @@ SCHEDULE_ADRESS = "http://backend:5001/schedule/"
 # STUDENTS_ADRESS = "localhost:5001/students/"
 # SCHEDULE_ADRESS = "localhost:5001/schedule/"
 
-
-""" GROUPS """
-
 def get_groups() -> List[Dict]:
     # print("Get groups returned", requests.post(GROUPS_ADRESS + "get/").json()[0]["data"])
     return requests.post(GROUPS_ADRESS + "get/").json()[0]["data"]
 
 def get_leaders() -> List[Dict]:
     return [group[2] for group in get_groups()]
-
-
-""" STUDENTS """
 
 def get_students() -> List[Dict]:
     return requests.post(STUDENTS_ADRESS + "get/").json()[0]["data"]

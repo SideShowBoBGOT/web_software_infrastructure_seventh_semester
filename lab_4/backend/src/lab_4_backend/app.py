@@ -129,7 +129,7 @@ def students_change_group() -> Response:
 def groups_get() -> Response:
     @db_operation
     def get_all_groups(cursor: MySQLCursor) -> list[Group]:
-        cursor.execute("SELECT * FROM groups")
+        cursor.execute("SELECT * FROM student_groups")
         return cast(list[Group], cursor.fetchall())
     
     try:

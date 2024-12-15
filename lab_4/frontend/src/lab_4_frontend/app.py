@@ -81,7 +81,7 @@ def transferRoute():
 def transferChangeGroup():
     try:
         data = cast_to_schema(group_transfer_schema, request.json)
-        dm.changeGroup(data["studentId"], data["newGroup"])
+        dm.change_group(data["studentId"], data["newGroup"])
         return make_response(jsonify({"success": True}), HTTPStatus.OK)
     except ValidationError as err:
         return make_response(jsonify({"error": cast(list[Any], err.messages)}), HTTPStatus.BAD_REQUEST)

@@ -62,7 +62,7 @@ def db_operation(func: Callable[..., T]) -> Callable[..., T]:
 Student = tuple[int, int, str, str]  # id, groupId, name, surname
 Group = tuple[int, str]  # id, name
 
-@app.route("/students/get/", methods=["POST"])
+@app.route("/students/get/", methods=["GET"])
 def students_get() -> Response:
     @db_operation
     def get_all_students(cursor: MySQLCursor) -> list[Student]:
@@ -74,7 +74,7 @@ def students_get() -> Response:
     except Exception as e:
         return make_response(jsonify({"error": str(e)}), HTTPStatus.INTERNAL_SERVER_ERROR)
 
-@app.route("/students/getById/", methods=["POST"])
+@app.route("/students/getById/", methods=["GET"])
 def students_get_by_id() -> Response:
     @db_operation
     def get_student(cursor: MySQLCursor) -> Optional[Student]:
@@ -116,7 +116,7 @@ def students_delete() -> Response:
     except Exception as e:
         return make_response(jsonify({"error": str(e)}), HTTPStatus.INTERNAL_SERVER_ERROR)
 
-@app.route("/students/change/group/", methods=["POST"])
+@app.route("/students/change/group/", methods=["PUT"])
 def students_change_group() -> Response:
     @db_operation
     def change_group(cursor: MySQLCursor) -> None:
@@ -132,7 +132,7 @@ def students_change_group() -> Response:
     except Exception as e:
         return make_response(jsonify({"error": str(e)}), HTTPStatus.INTERNAL_SERVER_ERROR)
 
-@app.route("/groups/get/", methods=["POST"])
+@app.route("/groups/get/", methods=["GET"])
 def groups_get() -> Response:
     @db_operation
     def get_all_groups(cursor: MySQLCursor) -> list[Group]:
@@ -145,7 +145,7 @@ def groups_get() -> Response:
     except Exception as e:
         return make_response(jsonify({"error": str(e)}), HTTPStatus.INTERNAL_SERVER_ERROR)
 
-@app.route("/schedule/get/", methods=["POST"])
+@app.route("/schedule/get/", methods=["GET"])
 def schedule_get() -> Response:
     try:
         db = connectors.mongo_conn()['schedules_db']

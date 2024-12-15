@@ -18,19 +18,19 @@ def get_leaders() -> list[Any]:
     return data
 
 def get_groups() -> list[Any]:
-    response = requests.post(GROUPS_ADDRESS + "get/")
+    response = requests.get(GROUPS_ADDRESS + "get/")
     data = response.json()["data"]
     logger.debug(f'get_groups: {data}')
     return data
 
 def get_students() -> list[Any]:
-    response = requests.post(STUDENTS_ADDRESS + "get/")
+    response = requests.get(STUDENTS_ADDRESS + "get/")
     data = response.json()["data"]
     logger.debug(f'get_students: {data}')
     return data
 
 def get_student(student_id: int) -> Any:
-    response = requests.post(
+    response = requests.get(
         STUDENTS_ADDRESS + "getById/",
         json={"studentId": student_id},
         headers={'Content-Type': 'application/json'}
@@ -40,7 +40,7 @@ def get_student(student_id: int) -> Any:
     return data
 
 def get_schedule() -> list[Any]:
-    data = requests.post(SCHEDULE_ADDRESS + "get/").json()["data"]
+    data = requests.get(SCHEDULE_ADDRESS + "get/").json()["data"]
     logger.debug(f'get_schedule: {data}')
     return data
 
@@ -63,7 +63,7 @@ def delete_student(student_id: int):
     )
 
 def change_group(student_id: int, new_group_id: int):
-    return requests.post(STUDENTS_ADDRESS + "change/group",
+    return requests.put(STUDENTS_ADDRESS + "change/group",
         data=json.dumps({
             "studentId": student_id,
             "groupId": new_group_id

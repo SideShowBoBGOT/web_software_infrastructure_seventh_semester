@@ -77,7 +77,7 @@ def transfer_route():
     except Exception as e:
         return make_response(jsonify({"error": str(e)}), HTTPStatus.INTERNAL_SERVER_ERROR)
 
-@app.route("/transfer/changeGroup/", methods=["POST"])
+@app.route("/transfer/changeGroup/", methods=["PUT"])
 def transfer_change_group():
     try:
         data = cast_to_schema(group_transfer_schema, request.json)

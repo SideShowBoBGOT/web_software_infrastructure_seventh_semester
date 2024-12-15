@@ -1,15 +1,16 @@
 import mysql.connector
 from pymongo import MongoClient
+import os
 
 MYSQL_CREDENTIALS = {
-    "host": "host.docker.internal",
-    "port": "3306",
-    "user": "root",
-    "password": "my-secret-pw",
-    "database": "lab4DB"
+    "host": os.getenv("MYSQL_HOST", "mysql"),
+    "port": os.getenv("MYSQL_PORT", "3306"),
+    "user": os.getenv("MYSQL_USER", "root"),
+    "password": os.getenv("MYSQL_PASSWORD", "root"),
+    "database": os.getenv("MYSQL_DATABASE", "lab4DB")
 }
 
-MONGO_CREDENTIALS = "mongodb://host.docker.internal:27017"
+MONGO_CREDENTIALS = os.getenv("MONGO_URI", "mongodb://mongodb:27017")
 
 def mysql_conn():
     return mysql.connector.connect(

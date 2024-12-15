@@ -2,48 +2,69 @@ version: '3'
 services:
   frontend:
     build: 
-      context: ./Frontend
+      context: ./frontend
     ports:
       - "55001:55001"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     networks:
       - app-network
 
   backend:
     build: 
-      context: ./Backend
+      context: ./backend
     ports:
       - "55002:55002"
     depends_on:
-      - mongodb
-      - mysql
+      mongodb:
+        condition: service_healthy
+      mysql:
+        condition: service_healthy
     networks:
       - app-network
     environment:
       - MYSQL_HOST=mysql
       - MYSQL_USER=root
       - MYSQL_PASSWORD=root
-      - MYSQL_DATABASE=your_db_name
-      - MONGO_URI=mongodb://mongodb:27017
+      - MYSQL_DATABASE=lab4DB
+      - MONGO_URI=mongodb://mongodb:27017/schedules_db
 
   mongodb:
     build: 
-      context: ./NO-SQL
+      context: ./databases/nosql
     networks:
       - app-network
+    volumes:
+      - mongodb_data:/data/db
     environment:
-      - MONGO_INITDB_DATABASE=your_mongo_db
+      - MONGO_INITDB_DATABASE=schedules_db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
       
   mysql:
     build: 
-      context: ./SQL
+      context: ./databases/sql
     networks:
       - app-network
+    volumes:
+      - mysql_data:/var/lib/mysql
     environment:
       - MYSQL_ROOT_PASSWORD=root
-      - MYSQL_DATABASE=your_db_name
+      - MYSQL_DATABASE=lab4DB
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 networks:
   app-network:
     driver: bridge
+
+volumes:
+  mongodb_data:
+  mysql_data:

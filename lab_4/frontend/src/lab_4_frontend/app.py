@@ -14,7 +14,7 @@ class GroupTransferSchema(Schema):
     groupId = fields.String(required=True)
 
 class StudentAddSchema(Schema):
-    group = fields.String(required=True)
+    group = fields.Integer(required=True)
     name = fields.String(required=True)
     surname = fields.String(required=True)
 
@@ -96,12 +96,12 @@ def add_student_route():
     except Exception as e:
         return make_response(jsonify({"error": str(e)}), HTTPStatus.INTERNAL_SERVER_ERROR)
 
-@app.route("/addStudent/commit", methods=["POST"])
+@app.route("/addStudent/commit/", methods=["POST"])
 def add_student_commit_route():
     try:
         data = cast_to_schema(student_add_schema, request.json)
         dm.add_student(
-            data["group"][:6],
+            data["group"],
             data["name"],
             data["surname"]
         )

@@ -1,0 +1,49 @@
+version: '3'
+services:
+  frontend:
+    build: 
+      context: ./Frontend
+    ports:
+      - "5002:5002"
+    depends_on:
+      - backend
+    networks:
+      - app-network
+
+  backend:
+    build: 
+      context: ./Backend
+    ports:
+      - "5001:5001"
+    depends_on:
+      - mongodb
+      - mysql
+    networks:
+      - app-network
+    environment:
+      - MYSQL_HOST=mysql
+      - MYSQL_USER=root
+      - MYSQL_PASSWORD=root
+      - MYSQL_DATABASE=your_db_name
+      - MONGO_URI=mongodb://mongodb:27017
+
+  mongodb:
+    build: 
+      context: ./NO-SQL
+    networks:
+      - app-network
+    environment:
+      - MONGO_INITDB_DATABASE=your_mongo_db
+      
+  mysql:
+    build: 
+      context: ./SQL
+    networks:
+      - app-network
+    environment:
+      - MYSQL_ROOT_PASSWORD=root
+      - MYSQL_DATABASE=your_db_name
+
+networks:
+  app-network:
+    driver: bridge

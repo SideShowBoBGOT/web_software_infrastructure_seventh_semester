@@ -8,7 +8,6 @@ from mysql.connector.cursor import MySQLCursor
 from mysql.connector import MySQLConnection
 
 app = Flask(__name__)
-DEBUG = False
 
 T = TypeVar('T')
 
@@ -151,4 +150,5 @@ def schedule_get() -> Response:
         return make_response(jsonify({"error": str(e)}), HTTPStatus.INTERNAL_SERVER_ERROR)
 
 if __name__ == "__main__":
+    app.debug = True
     app.run(host='0.0.0.0', port=55002)

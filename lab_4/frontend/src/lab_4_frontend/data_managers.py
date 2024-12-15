@@ -44,29 +44,29 @@ def get_schedule() -> list[Any]:
     logger.debug(f'get_schedule: {data}')
     return data
 
-def addStudent(groupId: int, name: str, surname: str):
+def add_student(group_id: int, name: str, surname: str):
     return requests.post(STUDENTS_ADDRESS + "change/add",
         data=json.dumps({
-            "groupId": groupId,
+            "groupId": group_id,
             "name": name,
             "surname": surname
         }),  
         headers={'Content-Type': 'application/json'}
     )
 
-def deleteStudent(studentId: int):
+def delete_student(student_id: int):
     return requests.post(STUDENTS_ADDRESS + "change/delete",
         data=json.dumps({
-            "studentId": studentId
+            "studentId": student_id
         }),  
         headers={'Content-Type': 'application/json'}
     )
 
-def changeGroup(studentId: int, newGroupId: int):
+def change_group(student_id: int, new_group_id: int):
     return requests.post(STUDENTS_ADDRESS + "change/group",
         data=json.dumps({
-            "studentId": studentId,
-            "groupId": newGroupId
+            "studentId": student_id,
+            "groupId": new_group_id
         }),  
         headers={'Content-Type': 'application/json'}
     )

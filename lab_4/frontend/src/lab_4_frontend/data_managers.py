@@ -40,7 +40,9 @@ def get_student(student_id: int) -> Any:
     return data
 
 def get_schedule() -> list[Any]:
-    return requests.post(SCHEDULE_ADDRESS + "get/").json()["data"]
+    data = requests.post(SCHEDULE_ADDRESS + "get/").json()["data"]
+    logger.debug(f'get_schedule: {data}')
+    return data
 
 def addStudent(groupId: int, name: str, surname: str):
     return requests.post(STUDENTS_ADDRESS + "change/add",

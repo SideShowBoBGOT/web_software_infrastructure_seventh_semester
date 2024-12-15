@@ -6,6 +6,12 @@ from typing import Any, ParamSpec, Callable, TypeAlias, TypeVar, cast, Optional
 from http import HTTPStatus
 from mysql.connector.cursor import MySQLCursor
 from mysql.connector import MySQLConnection
+import logging
+import sys
+
+logger = logging.getLogger('backendLogger')
+logger.addHandler(logging.StreamHandler(sys.stdout))
+logger.setLevel(logging.DEBUG)
 
 app = Flask(__name__)
 
@@ -144,6 +150,7 @@ def schedule_get() -> Response:
         db = connectors.mongo_conn()['schedules_db']
         coll = db["schedule_collection"]
         result = coll.find()
+        logger.debug(f'schedule_get: {result}')
         result_list: list[JsonDict] = [dict(doc, _id=str(doc['_id'])) for doc in result]
         return make_response(jsonify({"data": result_list}), HTTPStatus.OK)
     except Exception as e:

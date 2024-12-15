@@ -28,10 +28,8 @@ STUDENT_ID_SCHEMA = StudentIdSchema()
 GROUP_CHANGE_SCHEMA = GroupChangeSchema()
 STUDENTS_ADD_SCHEMA = StudentAddSchema()
 
-SchemaType = TypeVar('SchemaType', bound=Schema)
-
-def cast_to_schema(schema: SchemaType, json_data: Any) -> SchemaType:
-    return cast(SchemaType, schema.load(json_data))
+def cast_to_schema(schema: Schema, json_data: Any) -> Any:
+    return cast(Any, schema.load(json_data))
 
 P = ParamSpec('P')
 R = TypeVar('R')
@@ -76,7 +74,7 @@ def students_get_by_id() -> Response:
     @db_operation
     def get_student(cursor: MySQLCursor) -> Optional[Student]:
         data = cast_to_schema(STUDENT_ID_SCHEMA, request.get_json())
-        cursor.execute("SELECT * FROM students WHERE id = %s", (str(data.studentId),))
+        cursor.execute("SELECT * FROM students WHERE id = %s", (data['studentId'],))
         return cast(Optional[Student], cursor.fetchone())
     try:
         result: Optional[Student] = get_student()
@@ -93,7 +91,7 @@ def students_add() -> Response:
         data = cast_to_schema(STUDENTS_ADD_SCHEMA, request.get_json())
         cursor.execute(
             "INSERT INTO students (groupId, name, surname) VALUES (%s, %s, %s)",
-            (str(data.groupId), str(data.name), str(data.surname))
+            (data['groupId'], data['name'], data['surname'])
         )
     try:
         add_student()
@@ -106,7 +104,7 @@ def students_delete() -> Response:
     @db_operation
     def delete_student(cursor: MySQLCursor) -> None:
         data = cast_to_schema(STUDENT_ID_SCHEMA, request.get_json())
-        cursor.execute("DELETE FROM students WHERE id = %s", (str(data.studentId),))
+        cursor.execute("DELETE FROM students WHERE id = %s", (data['studentId'],))
     try:
         delete_student()
         return make_response(jsonify({"success": True}), HTTPStatus.OK)
@@ -120,7 +118,7 @@ def students_change_group() -> Response:
         data = cast_to_schema(GROUP_CHANGE_SCHEMA, request.get_json())
         cursor.execute(
             "UPDATE students SET groupId = %s WHERE id = %s",
-            (str(data.groupId), str(data.studentId))
+            (str(data['groupId'], data['studentId']))
         )
     try:
         change_group()

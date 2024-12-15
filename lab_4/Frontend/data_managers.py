@@ -2,9 +2,9 @@ import requests
 from typing import Dict, List
 import json 
 
-GROUPS_ADRESS = "http://host.docker.internal:5001/groups/"
-STUDENTS_ADRESS = "http://host.docker.internal:5001/students/"
-SCHEDULE_ADRESS = "http://host.docker.internal:5001/schedule/"
+GROUPS_ADRESS = "http://backend:5001/groups/"
+STUDENTS_ADRESS = "http://backend:5001/students/"
+SCHEDULE_ADRESS = "http://backend:5001/schedule/"
 
 # GROUPS_ADRESS = "localhost:5001/groups/"
 # STUDENTS_ADRESS = "localhost:5001/students/"

@@ -150,8 +150,8 @@ def schedule_get() -> Response:
         db = connectors.mongo_conn()['schedules_db']
         coll = db["schedule_collection"]
         result = coll.find()
-        logger.debug(f'schedule_get: {result}')
         result_list: list[JsonDict] = [dict(doc, _id=str(doc['_id'])) for doc in result]
+        logger.debug(f'schedule_get: {result_list}')
         return make_response(jsonify({"data": result_list}), HTTPStatus.OK)
     except Exception as e:
         return make_response(jsonify({"error": str(e)}), HTTPStatus.INTERNAL_SERVER_ERROR)

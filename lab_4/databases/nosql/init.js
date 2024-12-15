@@ -1,4 +1,10 @@
-[
+db = db.getSiblingDB('schedules_db');
+
+if (!db.getCollectionNames().includes('schedule_collection')) {
+    db.createCollection('schedule_collection');
+}
+
+db.schedule_collection.insertMany([
     {
         "groupId": 1,
         "day": 1,
@@ -34,4 +40,4 @@
         "name": "Physics",
         "description": "matter, energy, natural laws"
     }
-]
+]);

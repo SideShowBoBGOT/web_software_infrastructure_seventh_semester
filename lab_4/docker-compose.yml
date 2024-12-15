@@ -6,7 +6,7 @@ services:
     ports:
       - "55001:55001"
     depends_on:
-      - backend    # Changed back to simple dependency
+      - backend
     networks:
       - app-network
 
@@ -34,6 +34,10 @@ services:
       - app-network
     environment:
       - MONGO_INITDB_DATABASE=schedules_db
+    volumes:
+      - mongodb_data:/data/db
+    ports:
+      - "27017:27017"
       
   mysql:
     build: 
@@ -43,7 +47,13 @@ services:
     environment:
       - MYSQL_ROOT_PASSWORD=root
       - MYSQL_DATABASE=lab4DB
+    volumes:
+      - mysql_data:/var/lib/mysql
 
 networks:
   app-network:
     driver: bridge
+
+volumes:
+  mongodb_data:
+  mysql_data:

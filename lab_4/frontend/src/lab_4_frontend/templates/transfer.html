@@ -4,16 +4,19 @@
 
 {% block content %}
   <br><br><br>
-  <h3 class="centered">Переведення&nbsp;<a href="">{{student.name}} {{student.surname}}</a></h3>
+  <h3 class="centered title-text">Переведення&nbsp;<a href="">{{student.name}} {{student.surname}}</a></h3>
   <div class="centered">
     {% if student.id in leaders %}
-      <p>Перевести старосту неможливо.</p>
+      <p class="error-text">Перевести старосту неможливо.</p>
     {% else %}
-      <select name="groups" id="groups">
+      <select name="groups" id="groups" class="styled-select">
+        <option value="" disabled selected>Оберіть групу</option>
         {% for group in groups %}
           <option value="group-{{group[0]}}">{{group[1]}}</option>
         {% endfor %}
       </select>
+      <br><br>
+      <button id="confirmButton" class="btn-confirm" disabled>Підтвердити</button>
     {% endif %}
   </div>
 {% endblock content %}

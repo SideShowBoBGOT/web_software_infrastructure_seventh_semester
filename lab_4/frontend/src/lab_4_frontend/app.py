@@ -2,8 +2,10 @@ from flask import Flask, render_template, jsonify, request, make_response
 from marshmallow import Schema, fields, ValidationError
 from http import HTTPStatus
 import lab_4_frontend.data_managers as dm
-from lab_4_frontend.misc import cast_to_schema
 from typing import cast, Any
+
+def cast_to_schema(schema: Schema, json_data: Any) -> Any:
+    return cast(Any, schema.load(json_data))
 
 app = Flask(__name__)
 

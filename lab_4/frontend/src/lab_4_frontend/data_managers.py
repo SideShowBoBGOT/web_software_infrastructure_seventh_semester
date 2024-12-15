@@ -1,38 +1,33 @@
 import requests
 from typing import Any
 import json
-from marshmallow import Schema, fields
-from lab_4_frontend.misc import cast_to_schema
+import logging
+import sys
 
 GROUPS_ADDRESS = "http://backend:55002/groups/"
 STUDENTS_ADDRESS = "http://backend:55002/students/"
 SCHEDULE_ADDRESS = "http://backend:55002/schedule/"
 
+logger = logging.getLogger('frontLogger')
+logger.addHandler(logging.StreamHandler(sys.stdout))
+logger.setLevel(logging.DEBUG)
+
 def get_leaders() -> list[Any]:
-    return [group[2] for group in get_groups()]
-
-class StudentSchema(Schema):
-    id = fields.Integer(required=True)
-    groupId = fields.Integer(required=True)
-    name = fields.String(required=True)
-    surname = fields.String(required=True)
-
-class GroupSchema(Schema):
-    id = fields.Integer(required=True)
-    name = fields.String(required=True)
-
-STUDENT_SCHEMA = StudentSchema()
-STUDENTS_SCHEMA = StudentSchema(many=True)
-GROUP_SCHEMA = GroupSchema()
-GROUPS_SCHEMA = GroupSchema(many=True)
+    data = [group[2] for group in get_groups()]
+    logger.debug(f'get_leaders: {data}')
+    return data
 
 def get_groups() -> list[Any]:
     response = requests.post(GROUPS_ADDRESS + "get/")
-    return cast_to_schema(GROUPS_SCHEMA, response.json()[0]["data"])
+    data = response.json()["data"]
+    logger.debug(f'get_groups: {data}')
+    return data
 
 def get_students() -> list[Any]:
     response = requests.post(STUDENTS_ADDRESS + "get/")
-    return cast_to_schema(STUDENTS_SCHEMA, response.json()[0]["data"])
+    data = response.json()["data"]
+    logger.debug(f'get_students: {data}')
+    return data
 
 def get_student(student_id: int) -> Any:
     response = requests.post(
@@ -40,10 +35,12 @@ def get_student(student_id: int) -> Any:
         json={"studentId": student_id},
         headers={'Content-Type': 'application/json'}
     )
-    return cast_to_schema(STUDENT_SCHEMA, response.json()[0]["data"])
+    data = response.json()["data"]
+    logger.debug(f'get_student: {data}')
+    return data
 
 def get_schedule() -> list[Any]:
-    return requests.post(SCHEDULE_ADDRESS + "get/").json()[0]["data"]
+    return requests.post(SCHEDULE_ADDRESS + "get/").json()["data"]
 
 def addStudent(groupId: int, name: str, surname: str):
     return requests.post(STUDENTS_ADDRESS + "change/add",

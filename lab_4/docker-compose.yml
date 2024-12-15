@@ -4,7 +4,7 @@ services:
     build: 
       context: ./Frontend
     ports:
-      - "5002:5002"
+      - "55001:55001"
     depends_on:
       - backend
     networks:
@@ -14,7 +14,7 @@ services:
     build: 
       context: ./Backend
     ports:
-      - "5001:5001"
+      - "55002:55002"
     depends_on:
       - mongodb
       - mysql

@@ -8,6 +8,7 @@ setup(
         'mysql-connector-python',
         'marshmallow',
         'pymongo',
+        'requests',
         'flask'
     ],
     package_dir={"": "src"},

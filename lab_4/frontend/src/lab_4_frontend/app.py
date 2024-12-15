@@ -11,7 +11,7 @@ app = Flask(__name__)
 
 class GroupTransferSchema(Schema):
     studentId = fields.Integer(required=True)
-    newGroup = fields.String(required=True)
+    groupId = fields.String(required=True)
 
 class StudentAddSchema(Schema):
     group = fields.String(required=True)
@@ -26,7 +26,7 @@ student_add_schema = StudentAddSchema()
 student_delete_schema = StudentDeleteSchema()
 
 @app.route("/")
-def indexRoute():
+def index_route():
     try:
         groups = dm.get_groups()
         students = dm.get_students()
@@ -41,7 +41,7 @@ def indexRoute():
         return make_response(jsonify({"error": str(e)}), HTTPStatus.INTERNAL_SERVER_ERROR)
 
 @app.route("/schedule/")
-def scheduleRoute():
+def schedule_route():
     try:
         groups = dm.get_groups()
         schedule = dm.get_schedule()
@@ -54,7 +54,7 @@ def scheduleRoute():
         return make_response(jsonify({"error": str(e)}), HTTPStatus.INTERNAL_SERVER_ERROR)
 
 @app.route("/transfer/")
-def transferRoute():
+def transfer_route():
     try:
         student_id = int(request.args["studentId"])
         groups = dm.get_groups()
@@ -78,10 +78,10 @@ def transferRoute():
         return make_response(jsonify({"error": str(e)}), HTTPStatus.INTERNAL_SERVER_ERROR)
 
 @app.route("/transfer/changeGroup/", methods=["POST"])
-def transferChangeGroup():
+def transfer_change_group():
     try:
         data = cast_to_schema(group_transfer_schema, request.json)
-        dm.change_group(data["studentId"], data["newGroup"])
+        dm.change_group(data["studentId"], data["groupId"])
         return make_response(jsonify({"success": True}), HTTPStatus.OK)
     except ValidationError as err:
         return make_response(jsonify({"error": cast(list[Any], err.messages)}), HTTPStatus.BAD_REQUEST)
@@ -89,7 +89,7 @@ def transferChangeGroup():
         return make_response(jsonify({"error": str(e)}), HTTPStatus.INTERNAL_SERVER_ERROR)
 
 @app.route("/addStudent/")
-def addStudentRoute():
+def add_student_route():
     try:
         groups = dm.get_groups()
         return render_template("addStudent.html", groups=groups)
@@ -97,10 +97,10 @@ def addStudentRoute():
         return make_response(jsonify({"error": str(e)}), HTTPStatus.INTERNAL_SERVER_ERROR)
 
 @app.route("/addStudent/commit", methods=["POST"])
-def addStudentCommitRoute():
+def add_student_commit_route():
     try:
         data = cast_to_schema(student_add_schema, request.json)
-        dm.addStudent(
+        dm.add_student(
             data["group"][:6],
             data["name"],
             data["surname"]
@@ -113,10 +113,10 @@ def addStudentCommitRoute():
 
 
 @app.route("/deleteStudent/commit", methods=["POST"])
-def deleteStudentCommitRoute():
+def delete_student_commit_route():
     try:
         data = cast_to_schema(student_delete_schema, request.json)
-        dm.deleteStudent(data["id"])
+        dm.delete_student(data["id"])
         return make_response(jsonify({"success": True}), HTTPStatus.OK)
     except ValidationError as err:
         return make_response(jsonify({"error": err.messages}), HTTPStatus.BAD_REQUEST)

@@ -121,9 +121,10 @@ def students_change_group() -> Response:
     @db_operation
     def change_group(cursor: MySQLCursor) -> None:
         data = cast_to_schema(GROUP_CHANGE_SCHEMA, request.get_json())
+        logger.debug(f'change_group: {data}')
         cursor.execute(
             "UPDATE students SET groupId = %s WHERE id = %s",
-            (str(data['groupId'], data['studentId']))
+            (data['groupId'], data['studentId'])
         )
     try:
         change_group()

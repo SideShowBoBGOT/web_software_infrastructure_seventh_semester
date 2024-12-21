@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block title %} Переведення {% endblock title %}
+
+{% block content %}
+  <br><br><br>
+  <h3 class="centered title-text">Переведення&nbsp;<a href="">{{student.name}} {{student.surname}}</a></h3>
+  <div class="centered">
+    {% if student.id in leaders %}
+      <p class="error-text">Перевести старосту неможливо.</p>
+    {% else %}
+      <select name="groups" id="groups" class="styled-select">
+        <option value="" disabled selected>Оберіть групу</option>
+        {% for group in groups %}
+          <option value="group-{{group[0]}}">{{group[1]}}</option>
+        {% endfor %}
+      </select>
+      <br><br>
+      <button id="confirmButton" class="btn-confirm" disabled>Підтвердити</button>
+    {% endif %}
+  </div>
+{% endblock content %}
+
+{% block js %}
+  <script type="module" src="{{ url_for('static', filename='transfer.js') }}"></script>
+{% endblock js %}

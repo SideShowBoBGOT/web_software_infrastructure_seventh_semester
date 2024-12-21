@@ -1,0 +1,59 @@
+version: '3'
+services:
+  frontend:
+    build: 
+      context: ./frontend
+    ports:
+      - "55001:55001"
+    depends_on:
+      - backend
+    networks:
+      - app-network
+
+  backend:
+    build: 
+      context: ./backend
+    ports:
+      - "55002:55002"
+    depends_on:
+      - mongodb
+      - mysql
+    networks:
+      - app-network
+    environment:
+      - MYSQL_HOST=mysql
+      - MYSQL_USER=root
+      - MYSQL_PASSWORD=root
+      - MYSQL_DATABASE=lab4DB
+      - MONGO_URI=mongodb://mongodb:27017/schedules_db
+
+  mongodb:
+    build: 
+      context: ./databases/nosql
+    networks:
+      - app-network
+    environment:
+      - MONGO_INITDB_DATABASE=schedules_db
+    volumes:
+      - mongodb_data:/data/db
+    ports:
+      - "27017:27017"
+      
+  mysql:
+    build: 
+      context: ./databases/sql
+    networks:
+      - app-network
+    environment:
+      - MYSQL_ROOT_PASSWORD=root
+      - MYSQL_DATABASE=lab4DB
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  mongodb_data:
+  mysql_data:

@@ -1,0 +1,77 @@
+/* General body background */
+body {
+    background-color: #f4f6f9;
+    font-family: 'Arial', sans-serif;
+    color: #333;
+}
+
+/* Title text style */
+.title-text {
+    color: #007bff;
+    font-size: 24px;
+    font-weight: bold;
+}
+
+/* Error text */
+.error-text {
+    color: #dc3545;
+    font-weight: bold;
+}
+
+/* Styled dropdown */
+.styled-select {
+    padding: 10px;
+    font-size: 16px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    background-color: #fff;
+    color: #333;
+    width: 250px;
+}
+
+/* Dropdown focus */
+.styled-select:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
+}
+
+/* Confirmation button */
+.btn-confirm {
+    background-color: #28a745;
+    color: white;
+    padding: 10px 20px;
+    font-size: 16px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+/* Disabled button */
+.btn-confirm:disabled {
+    background-color: #d4d4d4;
+    cursor: not-allowed;
+}
+
+/* Button hover effect */
+.btn-confirm:hover:enabled {
+    background-color: #218838;
+}
+
+/* Centered content */
+.centered {
+    text-align: center;
+    margin: 20px 0;
+}
+
+/* Button hover and active for cross actions */
+.btn-danger {
+    background-color: #ffffff;
+    border: none;
+    color: white;
+    transition: background-color 0.3s ease;
+}
+
+.btn-danger:hover {
+    background-color: #c82333;
+}

@@ -1,8 +1,7 @@
 use actix_web::{web, App, HttpServer};
-use tokio_postgres::NoTls;
 use mongodb::Client as MongoClient;
 use std::env;
-use std::sync::Arc;
+use sqlx::postgres::PgPoolOptions;
 
 mod routes;
 
@@ -30,19 +29,14 @@ async fn main() -> std::io::Result<()> {
         .parse::<u16>()
         .expect("BACKEND_PORT must be a valid port number");
 
-    let pg_config = format!(
-        "host={} port={} user={} password={} dbname={}",
-        pg_host, pg_port, pg_user, pg_password, pg_db
-    );
-    let (pg_client, pg_connection) = tokio_postgres::connect(&pg_config, NoTls)
-        .await
-        .expect("Failed to connect to PostgreSQL");
+    let database_url = format!("postgresql://{pg_user}:{pg_password}@{pg_host}:{pg_port}/{pg_db}");
 
-    tokio::spawn(async move {
-        if let Err(e) = pg_connection.await {
-            eprintln!("PostgreSQL connection error: {}", e);
-        }
-    });
+    let pool = PgPoolOptions::new()
+        .max_connections(5)
+        .acquire_timeout(std::time::Duration::from_secs(50))
+        .connect(&database_url)
+        .await
+        .expect("Failed to create pool");
 
     let mongo_uri = format!("mongodb://{}:{}", mongo_host, mongo_port);
     let mongo_client = MongoClient::with_uri_str(&mongo_uri)
@@ -51,12 +45,10 @@ async fn main() -> std::io::Result<()> {
     let mongo_db = mongo_client.database(&mongo_db);
     let mongo_collection = mongo_db.collection::<Group>(&mongo_collection);
 
-    let pg_client = Arc::new(pg_client);
-
     println!("Starting server on port {}", backend_port);
     HttpServer::new(move || {
         App::new()
-            .app_data(web::Data::new(pg_client.clone()))
+            .app_data(web::Data::new(pool.clone()))
             .app_data(web::Data::new(mongo_collection.clone()))
             .configure(routes::configure_routes)
     })

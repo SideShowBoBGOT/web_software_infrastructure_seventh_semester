@@ -36,7 +36,7 @@ services:
     volumes:
       - mongo_data:/data/db
     ports:
-      - "${MONGO_PORT}:${MONGO_PORT}"
+      - "${MONGO_EXTERNAL_PORT}:${MONGO_PORT}"
       
   postgresql:
     image: postgres:15
@@ -45,9 +45,9 @@ services:
     networks:
       - app-network
     volumes:
-      - postgresql_data:/var/lib/postgresql/data
+      - ./databases/postgresql/setup.sql:/docker-entrypoint-initdb.d/setup.sql
     ports:
-      - "${POSTGRES_PORT}:${POSTGRES_PORT}"
+      - "${POSTGRES_EXTERNAL_PORT}:${POSTGRES_PORT}"
 
 volumes:
   mongo_data:

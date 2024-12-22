@@ -1,8 +1,3 @@
-\set dbname :POSTGRES_DB
-
-CREATE DATABASE IF NOT EXISTS :dbname;
-\connect :dbname
-
 CREATE TABLE students (
     id SERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,

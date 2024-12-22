@@ -2,11 +2,11 @@ use actix_web::{web, HttpResponse, Responder};
 use actix_multipart::Multipart;
 use futures::{StreamExt, TryStreamExt};
 use serde::{Deserialize, Serialize};
-use tokio_postgres::{Client as PgClient};
+use sqlx::PgPool;
 use mongodb::{Collection};
 use mongodb::bson::{doc, Document};
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, sqlx::FromRow)]
 struct Student {
     id: i32,
     name: String,
@@ -22,44 +22,31 @@ struct Group {
     name: String,
 }
 
-async fn get_students(pg_client: web::Data<PgClient>) -> impl Responder {
-    match pg_client.query("SELECT id, name, surname, group_id FROM students", &[]).await {
-        Ok(rows) => {
-            let students: Vec<Student> = rows.iter().map(|row| Student {
-                id: row.get(0),
-                name: row.get(1),
-                surname: row.get(2),
-                group_id: row.get(3),
-                image_data: None,
-            }).collect();
-            HttpResponse::Ok().json(students)
-        },
-        Err(e) => {
-            HttpResponse::InternalServerError().body(e.to_string())
-        }
+async fn get_students(pool: web::Data<PgPool>) -> impl Responder {
+    match sqlx::query_as::<_, Student>(
+        "SELECT id, name, surname, group_id FROM students"
+    )
+        .fetch_all(pool.get_ref())
+        .await {
+        Ok(students) => HttpResponse::Ok().json(students),
+        Err(e) => HttpResponse::InternalServerError().body(e.to_string())
     }
 }
 
-async fn get_student(id: web::Path<i32>, pg_client: web::Data<PgClient>) -> impl Responder {
-    match pg_client.query_one(
-        "SELECT id, name, surname, group_id, image_data FROM students WHERE id = $1",
-        &[id.as_ref()]
-    ).await {
-        Ok(row) => {
-            let student = Student {
-                id: row.get(0),
-                name: row.get(1),
-                surname: row.get(2),
-                group_id: row.get(3),
-                image_data: row.get(4),
-            };
-            HttpResponse::Ok().json(student)
-        },
-        Err(_) => HttpResponse::NotFound().finish()
+async fn get_student(id: web::Path<i32>, pool: web::Data<PgPool>) -> impl Responder {
+    match sqlx::query_as::<_, Student>(
+        "SELECT id, name, surname, group_id, image_data FROM students WHERE id = $1"
+    )
+        .bind(id.into_inner())
+        .fetch_optional(pool.get_ref())
+        .await {
+        Ok(Some(student)) => HttpResponse::Ok().json(student),
+        Ok(None) => HttpResponse::NotFound().finish(),
+        Err(e) => HttpResponse::InternalServerError().body(e.to_string())
     }
 }
 
-async fn create_student(mut payload: Multipart, pg_client: web::Data<PgClient>) -> impl Responder {
+async fn create_student(mut payload: Multipart, pool: web::Data<PgPool>) -> impl Responder {
     let mut name = String::new();
     let mut surname = String::new();
     let mut group_id = 0;
@@ -104,10 +91,15 @@ async fn create_student(mut payload: Multipart, pg_client: web::Data<PgClient>) 
         }
     }
 
-    match pg_client.execute(
-        "INSERT INTO students (name, surname, group_id, image_data) VALUES ($1, $2, $3, $4)",
-        &[&name, &surname, &group_id, &image_data]
-    ).await {
+    match sqlx::query(
+        "INSERT INTO students (name, surname, group_id, image_data) VALUES ($1, $2, $3, $4)"
+    )
+        .bind(&name)
+        .bind(&surname)
+        .bind(group_id)
+        .bind(&image_data)
+        .execute(pool.get_ref())
+        .await {
         Ok(_) => HttpResponse::Ok().finish(),
         Err(e) => HttpResponse::InternalServerError().body(e.to_string())
     }
@@ -116,7 +108,7 @@ async fn create_student(mut payload: Multipart, pg_client: web::Data<PgClient>) 
 async fn update_student(
     id: web::Path<i32>,
     mut payload: Multipart,
-    pg_client: web::Data<PgClient>
+    pool: web::Data<PgPool>
 ) -> impl Responder {
     let mut name = String::new();
     let mut surname = String::new();
@@ -164,16 +156,27 @@ async fn update_student(
         }
     }
 
-    let query = if has_new_image {
-        "UPDATE students SET name = $1, surname = $2, group_id = $3, image_data = $4 WHERE id = $5"
-    } else {
-        "UPDATE students SET name = $1, surname = $2, group_id = $3 WHERE id = $4"
-    };
-
     let result = if has_new_image {
-        pg_client.execute(query, &[&name, &surname, &group_id, &image_data, id.as_ref()]).await
+        sqlx::query(
+            "UPDATE students SET name = $1, surname = $2, group_id = $3, image_data = $4 WHERE id = $5"
+        )
+            .bind(&name)
+            .bind(&surname)
+            .bind(group_id)
+            .bind(&image_data)
+            .bind(id.into_inner())
+            .execute(pool.get_ref())
+            .await
     } else {
-        pg_client.execute(query, &[&name, &surname, &group_id, id.as_ref()]).await
+        sqlx::query(
+            "UPDATE students SET name = $1, surname = $2, group_id = $3 WHERE id = $4"
+        )
+            .bind(&name)
+            .bind(&surname)
+            .bind(group_id)
+            .bind(id.into_inner())
+            .execute(pool.get_ref())
+            .await
     };
 
     match result {
@@ -182,13 +185,18 @@ async fn update_student(
     }
 }
 
-async fn delete_student(id: web::Path<i32>, pg_client: web::Data<PgClient>) -> impl Responder {
-    match pg_client.execute("DELETE FROM students WHERE id = $1", &[id.as_ref()]).await {
+async fn delete_student(id: web::Path<i32>, pool: web::Data<PgPool>) -> impl Responder {
+    match sqlx::query("DELETE FROM students WHERE id = $1")
+        .bind(id.into_inner())
+        .execute(pool.get_ref())
+        .await
+    {
         Ok(_) => HttpResponse::Ok().finish(),
         Err(e) => HttpResponse::InternalServerError().body(e.to_string())
     }
 }
 
+// MongoDB functions remain the same
 async fn get_groups(mongo_client: web::Data<Collection<Document>>) -> impl Responder {
     match mongo_client.find(None, None).await {
         Ok(cursor) => {

@@ -10,16 +10,46 @@ services:
       - "${FRONTEND_PORT}:${FRONTEND_PORT}"
     networks:
       - app-network
+
   backend:
     build:
       context: ./backend
+    env_file:
+      - .env
     ports:
-      - "55002:55002"
+      - "${BACKEND_PORT}:${BACKEND_PORT}"
     depends_on:
-      - mongodb
-      - mysql
+      - mongo
+      - postgresql
     networks:
       - app-network
+
+  mongo:
+    build: 
+      context: ./databases/mongo
+    env_file:
+      - .env
+    networks:
+      - app-network
+    volumes:
+      - mongo_data:/data/db
+    ports:
+      - "${MONGO_PORT}:${MONGO_PORT}"
+      
+  postgresql:
+    image: postgres:15
+    env_file:
+      - .env
+    networks:
+      - app-network
+    volumes:
+      - postgresql_data:/var/lib/postgresql/data
+    ports:
+      - "${POSTGRES_PORT}:${POSTGRES_PORT}"
+
+volumes:
+  mongo_data:
+  postgresql_data:
 
 networks:
   app-network:

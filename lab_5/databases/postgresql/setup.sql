@@ -1,8 +1,10 @@
-CREATE DATABASE IF NOT EXISTS lab5db;
-USE lab5db;
+\set dbname :POSTGRES_DB
+
+CREATE DATABASE IF NOT EXISTS :dbname;
+\connect :dbname
 
 CREATE TABLE students (
-    id INT PRIMARY KEY AUTO_INCREMENT,
+    id SERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     surname VARCHAR(255) NOT NULL,
     group_id INT NOT NULL,

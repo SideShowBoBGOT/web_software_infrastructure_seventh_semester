@@ -3,7 +3,8 @@ CREATE TABLE students (
     name VARCHAR(255) NOT NULL,
     surname VARCHAR(255) NOT NULL,
     group_id INT NOT NULL,
-    image_data BYTEA
+    image_data BYTEA,
+    image_type VARCHAR(30)
 );
 
 INSERT INTO students (name, surname, group_id) VALUES

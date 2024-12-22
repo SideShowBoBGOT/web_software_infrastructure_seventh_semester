@@ -63,45 +63,60 @@
             </thead>
             <tbody id="studentsTable">
             <!-- Example row -->
-            <tr>
-                <td>1</td>
-                <td><img src="/api/placeholder/100/100" alt="Student Photo" width="100"></td>
-                <td>John</td>
-                <td>Doe</td>
-                <td>Group A</td>
-                <td>
-                    <a href="/update-student?id=1">Edit</a>
-                    <button onclick="deleteStudent(1)">Delete</button>
-                </td>
-            </tr>
+                <tr>
+                    <td>1</td>
+                    <td><img src="/static/img/placeholder.png" alt="Student Photo" width="160" height="120"></td>
+                    <td>John</td>
+                    <td>Doe</td>
+                    <td>Group A</td>
+                    <td>
+                        <a href="/update-student?id=1">Edit</a>
+                        <button onclick="deleteStudent(1)">Delete</button>
+                    </td>
+                </tr>
             </tbody>
         </table>
     </section>
 </main>
 <script>
-    // Load initial data
     async function loadStudents() {
         try {
             const response = await fetch(`${window.API_BASE_URL}/api/students`);
-            const students = await response.json();
-            // Update table with students data
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const text = await response.text();
+            console.log('Raw response:', text);
+            
+            const students = JSON.parse(text);
+            console.log('Parsed students:', students);
+            
             const table = document.getElementById('studentsTable');
-            // Implementation here
+            table.innerHTML = '';
+            
+            students.forEach(student => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${student.id}</td>
+                    <td>
+                        <img src="${window.API_BASE_URL}/api/students/image/${student.id}" 
+                            alt="Student Photo" 
+                            width="160"
+                            height="120"
+                            onerror="this.src='/static/img/placeholder.png'">
+                    </td>
+                    <td>${student.name}</td>
+                    <td>${student.surname}</td>
+                    <td>${student.group_id}</td>
+                    <td>
+                        <a href="/update-student?id=${student.id}">Edit</a>
+                        <button onclick="deleteStudent(${student.id})">Delete</button>
+                    </td>
+                `;
+                table.appendChild(row);
+            });
         } catch (error) {
             console.error('Error loading students:', error);
-        }
-    }
-
-    async function loadGroups() {
-        try {
-            const response = await fetch(`${window.API_BASE_URL}/api/groups`);
-            const groups = await response.json();
-            // Populate group dropdowns
-            const groupSelect = document.getElementById('studentGroup');
-            const filterSelect = document.getElementById('filterGroup');
-            // Implementation here
-        } catch (error) {
-            console.error('Error loading groups:', error);
         }
     }
 
@@ -165,7 +180,6 @@
     // Load initial data when page loads
     document.addEventListener('DOMContentLoaded', () => {
         loadStudents();
-        loadGroups();
 
         // Add form submit event listener
         document.getElementById('addStudentForm').addEventListener('submit', handleAddStudent);

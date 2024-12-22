@@ -12,8 +12,6 @@ struct Student {
     name: String,
     surname: String,
     group_id: i32,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    image_data: Option<Vec<u8>>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -35,7 +33,7 @@ async fn get_students(pool: web::Data<PgPool>) -> impl Responder {
 
 async fn get_student(id: web::Path<i32>, pool: web::Data<PgPool>) -> impl Responder {
     match sqlx::query_as::<_, Student>(
-        "SELECT id, name, surname, group_id, image_data FROM students WHERE id = $1"
+        "SELECT id, name, surname, group_id FROM students WHERE id = $1"
     )
         .bind(id.into_inner())
         .fetch_optional(pool.get_ref())
@@ -46,11 +44,46 @@ async fn get_student(id: web::Path<i32>, pool: web::Data<PgPool>) -> impl Respon
     }
 }
 
+#[derive(Serialize, Deserialize, sqlx::FromRow)]
+struct ImageData {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    image_data: Option<Vec<u8>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    image_type: Option<String>,
+}
+
+async fn get_student_image(id: web::Path<i32>, pool: web::Data<PgPool>) -> impl Responder {
+    match sqlx::query_as::<_, ImageData>(
+        "SELECT image_data, image_type FROM students WHERE id = $1",
+    )
+        .bind(id.into_inner())
+        .fetch_optional(pool.get_ref())
+        .await {
+        Ok(Some(row)) => {
+            if let (Some(image_data), Some(image_type)) = (row.image_data, row.image_type) {
+                let content_type = match image_type.as_str() {
+                    "image/png" => "image/png",
+                    "image/jpeg" => "image/jpeg",
+                    _ => "application/octet-stream",
+                };
+                HttpResponse::Ok()
+                    .content_type(content_type)
+                    .body(image_data)
+            } else {
+                HttpResponse::NotFound().finish()
+            }
+        },
+        Ok(None) => HttpResponse::NotFound().finish(),
+        Err(e) => HttpResponse::InternalServerError().body(e.to_string())
+    }
+}
+
 async fn create_student(mut payload: Multipart, pool: web::Data<PgPool>) -> impl Responder {
     let mut name = String::new();
     let mut surname = String::new();
     let mut group_id = 0;
     let mut image_data = Vec::new();
+    let mut image_type = String::new();
 
     while let Some(item) = payload.next().await {
         if let Ok(mut field) = item {
@@ -80,6 +113,14 @@ async fn create_student(mut payload: Multipart, pool: web::Data<PgPool>) -> impl
                     }
                 },
                 "studentPhoto" => {
+                    // Get content type from the field
+                    if let Some(content_type) = field.content_type() {
+                        image_type = content_type.to_string();
+                        // Validate image type
+                        if !matches!(image_type.as_str(), "image/jpeg" | "image/png") {
+                            return HttpResponse::BadRequest().body("Invalid image format. Only JPEG and PNG are supported.");
+                        }
+                    }
                     while let Some(chunk) = field.next().await {
                         if let Ok(data) = chunk {
                             image_data.extend_from_slice(&data);
@@ -92,12 +133,13 @@ async fn create_student(mut payload: Multipart, pool: web::Data<PgPool>) -> impl
     }
 
     match sqlx::query(
-        "INSERT INTO students (name, surname, group_id, image_data) VALUES ($1, $2, $3, $4)"
+        "INSERT INTO students (name, surname, group_id, image_data, image_type) VALUES ($1, $2, $3, $4, $5)"
     )
         .bind(&name)
         .bind(&surname)
         .bind(group_id)
         .bind(&image_data)
+        .bind(&image_type)
         .execute(pool.get_ref())
         .await {
         Ok(_) => HttpResponse::Ok().finish(),
@@ -114,6 +156,7 @@ async fn update_student(
     let mut surname = String::new();
     let mut group_id = 0;
     let mut image_data = Vec::new();
+    let mut image_type = String::new();
     let mut has_new_image = false;
 
     while let Some(item) = payload.next().await {
@@ -145,6 +188,12 @@ async fn update_student(
                 },
                 "studentPhoto" => {
                     has_new_image = true;
+                    if let Some(content_type) = field.content_type() {
+                        image_type = content_type.to_string();
+                        if !matches!(image_type.as_str(), "image/jpeg" | "image/png") {
+                            return HttpResponse::BadRequest().body("Invalid image format. Only JPEG and PNG are supported.");
+                        }
+                    }
                     while let Some(chunk) = field.next().await {
                         if let Ok(data) = chunk {
                             image_data.extend_from_slice(&data);
@@ -158,12 +207,13 @@ async fn update_student(
 
     let result = if has_new_image {
         sqlx::query(
-            "UPDATE students SET name = $1, surname = $2, group_id = $3, image_data = $4 WHERE id = $5"
+            "UPDATE students SET name = $1, surname = $2, group_id = $3, image_data = $4, image_type = $5 WHERE id = $6"
         )
             .bind(&name)
             .bind(&surname)
             .bind(group_id)
             .bind(&image_data)
+            .bind(&image_type)
             .bind(id.into_inner())
             .execute(pool.get_ref())
             .await
@@ -317,6 +367,7 @@ pub fn configure_routes(cfg: &mut web::ServiceConfig) {
                 .route("/{id}", web::get().to(get_student))
                 .route("/{id}", web::put().to(update_student))
                 .route("/{id}", web::delete().to(delete_student)))
+                .route("/image/{id}", web::get().to(get_student_image))
             .service(web::scope("/groups")
                 .route("", web::get().to(get_groups))
                 .route("", web::post().to(create_group))

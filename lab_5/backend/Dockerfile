@@ -12,7 +12,7 @@ RUN apt-get install -y libssl3 ca-certificates
 
 COPY --from=builder /app/target/release/server ./server
 
-COPY static ./static
+# COPY static ./static
 
 EXPOSE ${BACKEND_PORT}
 

@@ -61,7 +61,7 @@
     // Load student data
     async function loadStudentData() {
         try {
-            const response = await fetch(`/api/students/${studentId}`);
+            const response = await fetch(`${window.API_BASE_URL}/api/students/${studentId}`);
             const student = await response.json();
 
             // Populate form fields
@@ -78,7 +78,7 @@
 
     async function loadGroups() {
         try {
-            const response = await fetch('/api/groups');
+            const response = await fetch(`${window.API_BASE_URL}/api/groups`);
             const groups = await response.json();
             // Populate group dropdown
             const groupSelect = document.getElementById('studentGroup');

@@ -1,21 +1,42 @@
 use actix_web::{App, HttpServer, web};
 use actix_files;
 use std::env;
+use std::fs;
 
-async fn serve_students() -> actix_web::Result<actix_files::NamedFile> {
-    Ok(actix_files::NamedFile::open("./static/students.html")?)
+async fn inject_env_and_serve(file_path: &str) -> actix_web::Result<actix_web::HttpResponse> {
+    let mut content = fs::read_to_string(file_path)?;
+
+    let backend_host = env::var("BACKEND_HOST").unwrap();
+    let backend_port = env::var("BACKEND_PORT").unwrap();
+
+    let config_script = format!(
+        r#"<script>
+            window.API_BASE_URL = "http://{}:{}";
+        </script>"#,
+        backend_host, backend_port
+    );
+
+    content = content.replace("<head>", &format!("<head>\n    {}", config_script));
+
+    Ok(actix_web::HttpResponse::Ok()
+        .content_type("text/html")
+        .body(content))
 }
 
-async fn serve_groups() -> actix_web::Result<actix_files::NamedFile> {
-    Ok(actix_files::NamedFile::open("./static/groups.html")?)
+async fn serve_students() -> actix_web::Result<actix_web::HttpResponse> {
+    inject_env_and_serve("./static/students.html").await
 }
 
-async fn serve_update_student() -> actix_web::Result<actix_files::NamedFile> {
-    Ok(actix_files::NamedFile::open("./static/update_student.html")?)
+async fn serve_groups() -> actix_web::Result<actix_web::HttpResponse> {
+    inject_env_and_serve("./static/groups.html").await
 }
 
-async fn serve_update_group() -> actix_web::Result<actix_files::NamedFile> {
-    Ok(actix_files::NamedFile::open("./static/update_group.html")?)
+async fn serve_update_student() -> actix_web::Result<actix_web::HttpResponse> {
+    inject_env_and_serve("./static/update_student.html").await
+}
+
+async fn serve_update_group() -> actix_web::Result<actix_web::HttpResponse> {
+    inject_env_and_serve("./static/update_group.html").await
 }
 
 #[actix_web::main]

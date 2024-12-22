@@ -50,7 +50,7 @@
             </select>
         </div>
 
-        <table border="1">
+        <table>
             <thead>
             <tr>
                 <th>ID</th>
@@ -82,7 +82,7 @@
     // Load initial data
     async function loadStudents() {
         try {
-            const response = await fetch('/api/students');
+            const response = await fetch(`${window.API_BASE_URL}/api/students`);
             const students = await response.json();
             // Update table with students data
             const table = document.getElementById('studentsTable');
@@ -94,7 +94,7 @@
 
     async function loadGroups() {
         try {
-            const response = await fetch('/api/groups');
+            const response = await fetch(`${window.API_BASE_URL}/api/groups`);
             const groups = await response.json();
             // Populate group dropdowns
             const groupSelect = document.getElementById('studentGroup');
@@ -131,7 +131,7 @@
     async function deleteStudent(id) {
         if (confirm('Are you sure you want to delete this student?')) {
             try {
-                const response = await fetch(`/api/students/${id}`, {
+                const response = await fetch(`${window.API_BASE_URL}/api/students/${id}`, {
                     method: 'DELETE'
                 });
 
@@ -152,7 +152,7 @@
     document.getElementById('filterGroup').addEventListener('change', async function(event) {
         const groupId = event.target.value;
         try {
-            const url = groupId ? `/api/students?group=${groupId}` : '/api/students';
+            const url = groupId ? `${window.API_BASE_URL}/api/students?group=${groupId}` : `${window.API_BASE_URL}/api/students`;
             const response = await fetch(url);
             const students = await response.json();
             // Update table with filtered students

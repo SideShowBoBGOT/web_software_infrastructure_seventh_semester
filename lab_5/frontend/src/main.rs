@@ -13,7 +13,7 @@ async fn main() -> std::io::Result<()> {
     HttpServer::new(move || {
         App::new()
             .service(actix_files::Files::new("/", "./static")
-                .index_file("index.html"))
+                .index_file("students.html"))
     })
         .bind(bind_address)?
         .run()

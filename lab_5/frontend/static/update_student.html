@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Update Student - Student Management System</title>
+</head>
+<body>
+<header>
+    <h1>Update Student Information</h1>
+    <nav>
+        <a href="students.html">Back to Students</a> |
+        <a href="groups.html">Groups</a>
+    </nav>
+</header>
+
+<main>
+    <section>
+        <h2>Edit Student Information</h2>
+        <form id="updateStudentForm" onsubmit="handleUpdateStudent(event)">
+            <input type="hidden" id="studentId" name="studentId">
+
+            <div>
+                <label for="currentPhoto">Current Photo:</label>
+                <img id="currentPhoto" src="/api/placeholder/150/150" alt="Current Student Photo" width="150">
+            </div>
+
+            <div>
+                <label for="studentName">First Name:</label>
+                <input type="text" id="studentName" name="studentName" required>
+            </div>
+
+            <div>
+                <label for="studentSurname">Last Name:</label>
+                <input type="text" id="studentSurname" name="studentSurname" required>
+            </div>
+
+            <div>
+                <label for="studentPhoto">New Photo (optional):</label>
+                <input type="file" id="studentPhoto" name="studentPhoto" accept="image/*">
+            </div>
+
+            <div>
+                <label for="studentGroup">Group:</label>
+                <select id="studentGroup" name="studentGroup" required>
+                    <option value="">Select Group</option>
+                </select>
+            </div>
+
+            <div>
+                <button type="submit">Update Student</button>
+                <button type="button" onclick="window.location.href='students.html'">Cancel</button>
+            </div>
+        </form>
+    </section>
+</main>
+<script>
+    // Get student ID from URL parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    const studentId = urlParams.get('id');
+
+    // Load student data
+    async function loadStudentData() {
+        try {
+            const response = await fetch(`/api/students/${studentId}`);
+            const student = await response.json();
+
+            // Populate form fields
+            document.getElementById('studentId').value = student.id;
+            document.getElementById('studentName').value = student.name;
+            document.getElementById('studentSurname').value = student.surname;
+            document.getElementById('currentPhoto').src = student.photoUrl;
+            document.getElementById('studentGroup').value = student.groupId;
+        } catch (error) {
+            console.error('Error loading student data:', error);
+            alert('Failed to load student data');
+        }
+    }
+
+    async function loadGroups() {
+        try {
+            const response = await fetch('/api/groups');
+            const groups = await response.json();
+            // Populate group dropdown
+            const groupSelect = document.getElementById('studentGroup');
+            // Implementation here
+        } catch (error) {
+            console.error('Error loading groups:', error);
+        }
+    }
+
+    async function handleUpdateStudent(event) {
+        event.preventDefault();
+        const formData = new FormData(event.target);
+
+        try {
+            const response = await fetch(`/api/students/${studentId}`, {
+                method: 'PUT',
+                body: formData
+            });
+
+            if (response.ok) {
+                alert('Student updated successfully');
+                window.location.href = 'students.html';
+            } else {
+                throw new Error('Failed to update student');
+            }
+        } catch (error) {
+            console.error('Error updating student:', error);
+            alert('Failed to update student');
+        }
+    }
+
+    // Load data when page loads
+    document.addEventListener('DOMContentLoaded', () => {
+        if (!studentId) {
+            alert('No student ID provided');
+            window.location.href = 'students.html';
+            return;
+        }
+        loadStudentData();
+        loadGroups();
+    });
+</script>
+</body>
+</html>

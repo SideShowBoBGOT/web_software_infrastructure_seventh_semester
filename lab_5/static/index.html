@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Student Management System</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<h1>Student Management System</h1>
+
+<div>
+    <h2>Groups</h2>
+    <form id="groupForm">
+        <input type="text" id="groupName" placeholder="Group Name" required>
+        <button type="submit">Add Group</button>
+    </form>
+
+    <h3>Group List</h3>
+    <table>
+        <thead>
+        <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Actions</th>
+        </tr>
+        </thead>
+        <tbody id="groupsTable"></tbody>
+    </table>
+</div>
+
+<div>
+    <h2>Students</h2>
+    <form id="studentForm">
+        <input type="text" id="studentName" placeholder="Name" required>
+        <input type="text" id="studentSurname" placeholder="Surname" required>
+        <select id="studentGroup" required>
+            <option value="">Select Group</option>
+        </select>
+        <button type="submit">Add Student</button>
+    </form>
+
+    <h3>Filter Students</h3>
+    <select id="filterGroup" onchange="filterStudents()">
+        <option value="">All Groups</option>
+    </select>
+
+    <h3>Student List</h3>
+    <table>
+        <thead>
+        <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Surname</th>
+            <th>Group</th>
+            <th>Actions</th>
+        </tr>
+        </thead>
+        <tbody id="studentsTable"></tbody>
+    </table>
+</div>
+
+<script>
+    const API_URL = 'http://localhost:8080/api';
+
+    // Load groups and students when page loads
+    document.addEventListener('DOMContentLoaded', () => {
+        /*loadGroups();
+        loadStudents();*/
+    });
+
+    // Groups functions
+    /*async function loadGroups() {
+        try {
+            const response = await fetch(`${API_URL}/groups`);
+            const groups = await response.json();
+
+            // Update groups table
+            const groupsTable = document.getElementById('groupsTable');
+            groupsTable.innerHTML = groups.map(group => `
+                    <tr>
+                        <td>${group.id}</td>
+                        <td>${group.name}</td>
+                        <td>
+                            <button onclick="deleteGroup(${group.id})">Delete</button>
+                        </td>
+                    </tr>
+                `).join('');
+
+            // Update group select options
+            const groupSelects = ['studentGroup', 'filterGroup'];
+            groupSelects.forEach(selectId => {
+                const select = document.getElementById(selectId);
+                const currentValue = select.value;
+                select.innerHTML = '<option value="">Select Group</option>' +
+                    groups.map(group => `
+                            <option value="${group.id}">${group.name}</option>
+                        `).join('');
+                select.value = currentValue;
+            });
+        } catch (error) {
+            alert('Error loading groups');
+        }
+    }*/
+
+/*    document.getElementById('groupForm').onsubmit = async (e) => {
+        e.preventDefault();
+        const name = document.getElementById('groupName').value;
+
+        try {
+            await fetch(`${API_URL}/groups`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name })
+            });
+
+            document.getElementById('groupName').value = '';
+            loadGroups();
+        } catch (error) {
+            alert('Error creating group');
+        }
+    };
+
+    async function deleteGroup(id) {
+        if (confirm('Delete this group?')) {
+            try {
+                await fetch(`${API_URL}/groups/${id}`, { method: 'DELETE' });
+                loadGroups();
+                loadStudents();
+            } catch (error) {
+                alert('Error deleting group');
+            }
+        }
+    }
+
+    // Students functions
+    async function loadStudents(groupId = '') {
+        try {
+            const url = groupId
+                ? `${API_URL}/students/group/${groupId}`
+                : `${API_URL}/students`;
+
+            const response = await fetch(url);
+            const students = await response.json();
+
+            document.getElementById('studentsTable').innerHTML = students.map(student => `
+                    <tr>
+                        <td>${student.id}</td>
+                        <td>${student.name}</td>
+                        <td>${student.surname}</td>
+                        <td>${student.group_id || 'No Group'}</td>
+                        <td>
+                            <button onclick="deleteStudent(${student.id})">Delete</button>
+                        </td>
+                    </tr>
+                `).join('');
+        } catch (error) {
+            alert('Error loading students');
+        }
+    }
+
+    document.getElementById('studentForm').onsubmit = async (e) => {
+        e.preventDefault();
+        const student = {
+            name: document.getElementById('studentName').value,
+            surname: document.getElementById('studentSurname').value,
+            group_id: document.getElementById('studentGroup').value || null
+        };
+
+        try {
+            await fetch(`${API_URL}/students`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(student)
+            });
+
+            document.getElementById('studentName').value = '';
+            document.getElementById('studentSurname').value = '';
+            document.getElementById('studentGroup').value = '';
+            loadStudents();
+        } catch (error) {
+            alert('Error creating student');
+        }
+    };
+
+    async function deleteStudent(id) {
+        if (confirm('Delete this student?')) {
+            try {
+                await fetch(`${API_URL}/students/${id}`, { method: 'DELETE' });
+                loadStudents();
+            } catch (error) {
+                alert('Error deleting student');
+            }
+        }
+    }
+
+    function filterStudents() {
+        const groupId = document.getElementById('filterGroup').value;
+        loadStudents(groupId);
+    }*/
+</script>
+</body>
+</html>

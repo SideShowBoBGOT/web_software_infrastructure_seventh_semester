@@ -8,6 +8,8 @@ services:
       - .env
     ports:
       - "${FRONTEND_PORT}:${FRONTEND_PORT}"
+    depends_on:
+      - backend
     networks:
       - app-network
 

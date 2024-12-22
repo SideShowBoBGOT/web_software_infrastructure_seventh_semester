@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+actix-cors = "0.6"
 actix-web = "4.4"
 actix-multipart = "0.6"
 mongodb = { version = "2.7", features = ["tokio-runtime"] }

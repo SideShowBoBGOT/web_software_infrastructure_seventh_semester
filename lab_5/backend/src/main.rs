@@ -1,4 +1,5 @@
 use actix_web::{web, App, HttpServer};
+use actix_cors::Cors;
 use mongodb::Client as MongoClient;
 use std::env;
 use sqlx::postgres::PgPoolOptions;
@@ -24,6 +25,11 @@ async fn main() -> std::io::Result<()> {
     let mongo_db = env::var("MONGO_INITDB_DATABASE").expect("MONGO_INITDB_DATABASE must be set");
     let mongo_collection = env::var("MONGO_COLLECTION").expect("MONGO_COLLECTION must be set");
 
+    let frontend_host = env::var("FRONTEND_HOST").expect("FRONTEND_HOST must be set");
+    let frontend_port = env::var("FRONTEND_PORT")
+        .expect("FRONTEND_PORT must be set")
+        .parse::<u16>()
+        .expect("FRONTEND_PORT must be a valid port number");
     let backend_port = env::var("BACKEND_PORT")
         .expect("BACKEND_PORT must be set")
         .parse::<u16>()
@@ -47,7 +53,22 @@ async fn main() -> std::io::Result<()> {
 
     println!("Starting server on port {}", backend_port);
     HttpServer::new(move || {
+        // Configure CORS
+        let cors = Cors::default()
+            // .allowed_origin(&format!("http://localhost:{}", frontend_port))
+            // .allowed_origin(&format!("http://{}:{}", frontend_host, frontend_port))
+            .allow_any_origin()
+            .allowed_methods(vec!["GET", "POST", "PUT", "DELETE"])
+            .allowed_headers(vec![
+                "Authorization",
+                "Accept",
+                "Content-Type",
+            ])
+            .supports_credentials()
+            .max_age(3600);
+
         App::new()
+            .wrap(cors)
             .app_data(web::Data::new(pool.clone()))
             .app_data(web::Data::new(mongo_collection.clone()))
             .configure(routes::configure_routes)

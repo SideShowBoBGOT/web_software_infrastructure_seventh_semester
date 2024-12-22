@@ -6,14 +6,13 @@ use std::fs;
 async fn inject_env_and_serve(file_path: &str) -> actix_web::Result<actix_web::HttpResponse> {
     let mut content = fs::read_to_string(file_path)?;
 
-    let backend_host = env::var("BACKEND_HOST").unwrap();
     let backend_port = env::var("BACKEND_PORT").unwrap();
 
     let config_script = format!(
         r#"<script>
-            window.API_BASE_URL = "http://{}:{}";
+            window.API_BASE_URL = "http://localhost:{}";
         </script>"#,
-        backend_host, backend_port
+        backend_port
     );
 
     content = content.replace("<head>", &format!("<head>\n    {}", config_script));

@@ -196,7 +196,6 @@ async fn delete_student(id: web::Path<i32>, pool: web::Data<PgPool>) -> impl Res
     }
 }
 
-// MongoDB functions remain the same
 async fn get_groups(mongo_client: web::Data<Collection<Document>>) -> impl Responder {
     match mongo_client.find(None, None).await {
         Ok(cursor) => {

@@ -16,7 +16,7 @@
 <main>
     <section>
         <h2>Edit Student Information</h2>
-        <form id="updateStudentForm" onsubmit="handleUpdateStudent(event)">
+        <form id="updateStudentForm">
             <input type="hidden" id="studentId" name="studentId">
 
             <div>
@@ -36,7 +36,7 @@
 
             <div>
                 <label for="studentPhoto">New Photo (optional):</label>
-                <input type="file" id="studentPhoto" name="studentPhoto" accept="image/*">
+                <input type="file" id="studentPhoto" name="studentPhoto" accept="image/png, image/jpeg, image/jpg">
             </div>
 
             <div>
@@ -119,6 +119,9 @@
         }
         loadStudentData();
         loadGroups();
+
+        // Add form submit event listener
+        document.getElementById('updateStudentForm').addEventListener('submit', handleUpdateStudent);
     });
 </script>
 </body>

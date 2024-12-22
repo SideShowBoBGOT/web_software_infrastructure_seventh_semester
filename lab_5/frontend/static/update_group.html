@@ -16,7 +16,7 @@
 <main>
     <section>
         <h2>Edit Group Information</h2>
-        <form id="updateGroupForm" onsubmit="handleUpdateGroup(event)">
+        <form id="updateGroupForm">
             <input type="hidden" id="groupId" name="groupId">
 
             <div>
@@ -34,11 +34,9 @@
 
 </main>
 <script>
-    // Get group ID from URL parameters
     const urlParams = new URLSearchParams(window.location.search);
     const groupId = urlParams.get('id');
 
-    // Load group data
     async function loadGroupData() {
         try {
             const response = await fetch(`/api/groups/${groupId}`);
@@ -80,7 +78,6 @@
         }
     }
 
-    // Load data when page loads
     document.addEventListener('DOMContentLoaded', () => {
         if (!groupId) {
             alert('No group ID provided');
@@ -88,6 +85,7 @@
             return;
         }
         loadGroupData();
+        document.getElementById('updateGroupForm').addEventListener('submit', handleUpdateGroup);
     });
 </script>
 </body>

@@ -16,7 +16,7 @@
 <main>
     <section>
         <h2>Add New Group</h2>
-        <form id="addGroupForm" onsubmit="handleAddGroup(event)">
+        <form id="addGroupForm">
             <div>
                 <label for="groupName">Group Name:</label>
                 <input type="text" id="groupName" name="groupName" required>
@@ -116,6 +116,9 @@
     // Load initial data when page loads
     document.addEventListener('DOMContentLoaded', () => {
         loadGroups();
+
+        // Add form submit event listener
+        document.getElementById('addGroupForm').addEventListener('submit', handleAddGroup);
     });
 </script>
 </body>

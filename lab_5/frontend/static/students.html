@@ -16,7 +16,7 @@
 <main>
     <section>
         <h2>Add New Student</h2>
-        <form id="addStudentForm" onsubmit="handleAddStudent(event)">
+        <form id="addStudentForm">
             <div>
                 <label for="studentName">First Name:</label>
                 <input type="text" id="studentName" name="studentName" required>
@@ -27,7 +27,7 @@
             </div>
             <div>
                 <label for="studentPhoto">Photo:</label>
-                <input type="file" id="studentPhoto" name="studentPhoto" accept="image/*" required>
+                <input type="file" id="studentPhoto" name="studentPhoto" accept="image/png, image/jpeg, image/jpg" required>
             </div>
             <div>
                 <label for="studentGroup">Group:</label>
@@ -166,6 +166,9 @@
     document.addEventListener('DOMContentLoaded', () => {
         loadStudents();
         loadGroups();
+
+        // Add form submit event listener
+        document.getElementById('addStudentForm').addEventListener('submit', handleAddStudent);
     });
 </script>
 </body>

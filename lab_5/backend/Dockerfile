@@ -14,6 +14,6 @@ COPY --from=builder /app/target/release/server ./server
 
 COPY static ./static
 
-EXPOSE ${FRONTEND_PORT}
+EXPOSE ${BACKEND_PORT}
 
 CMD ["./server"]

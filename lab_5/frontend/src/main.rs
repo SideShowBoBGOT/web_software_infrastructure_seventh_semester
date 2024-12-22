@@ -1,6 +1,5 @@
 use actix_web::{App, HttpServer, web};
 use actix_files;
-use dotenv::dotenv;
 use std::env;
 
 async fn serve_students() -> actix_web::Result<actix_files::NamedFile> {
@@ -21,7 +20,19 @@ async fn serve_update_group() -> actix_web::Result<actix_files::NamedFile> {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    dotenv().ok();
+    #[cfg(feature = "standalone")]
+    {
+        let path_env = {
+            let current_exe = std::env::current_exe().expect("Failed to get executable path");
+            let project_root = current_exe
+                .parent() // executable directory
+                .and_then(|p| p.parent()) // target directory
+                .and_then(|p| p.parent()) // project root
+                .expect("Failed to find project root");
+            project_root.join("../.env")
+        };
+        dotenv::from_path(path_env).ok();
+    }
 
     let port = env::var("FRONTEND_PORT").expect("FRONTEND_PORT must be set");
     let host = env::var("FRONTEND_HOST").expect("FRONTEND_HOST must be set");

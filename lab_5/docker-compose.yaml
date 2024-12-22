@@ -10,6 +10,17 @@ services:
       - "${FRONTEND_PORT}:${FRONTEND_PORT}"
     networks:
       - app-network
+  backend:
+    build:
+      context: ./backend
+    ports:
+      - "55002:55002"
+    depends_on:
+      - mongodb
+      - mysql
+    networks:
+      - app-network
+
 networks:
   app-network:
     driver: bridge

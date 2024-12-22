@@ -2,9 +2,9 @@ use actix_web::{web, HttpResponse, Responder};
 use actix_multipart::Multipart;
 use futures::{StreamExt, TryStreamExt};
 use serde::{Deserialize, Serialize};
-use sqlx::PgPool;
+use sqlx::{PgPool, Row};
 use mongodb::{Collection};
-use mongodb::bson::{doc, Document};
+use mongodb::bson::{doc};
 
 #[derive(Serialize, Deserialize, sqlx::FromRow)]
 struct Student {
@@ -16,8 +16,8 @@ struct Student {
     image_data: Option<Vec<u8>>,
 }
 
-#[derive(Serialize, Deserialize)]
-struct Group {
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Group {
     id: i32,
     name: String,
 }
@@ -196,17 +196,25 @@ async fn delete_student(id: web::Path<i32>, pool: web::Data<PgPool>) -> impl Res
     }
 }
 
-async fn get_groups(mongo_client: web::Data<Collection<Document>>) -> impl Responder {
+async fn get_groups(mongo_client: web::Data<Collection<Group>>) -> impl Responder {
     match mongo_client.find(None, None).await {
         Ok(cursor) => {
-            let groups: Vec<Document> = cursor.try_collect().await.unwrap_or_default();
-            HttpResponse::Ok().json(groups)
+            match cursor.try_collect::<Vec<Group>>().await {
+                Ok(groups) => {
+                    HttpResponse::Ok().json(groups)
+                },
+                Err(e) => {
+                    HttpResponse::InternalServerError().body(e.to_string())
+                }
+            }
         },
-        Err(e) => HttpResponse::InternalServerError().body(e.to_string())
+        Err(e) => {
+            HttpResponse::InternalServerError().body(e.to_string())
+        }
     }
 }
 
-async fn get_group(id: web::Path<i32>, mongo_client: web::Data<Collection<Document>>) -> impl Responder {
+async fn get_group(id: web::Path<i32>, mongo_client: web::Data<Collection<Group>>) -> impl Responder {
     match mongo_client.find_one(doc! { "id": id.into_inner() }, None).await {
         Ok(Some(group)) => HttpResponse::Ok().json(group),
         Ok(None) => HttpResponse::NotFound().finish(),
@@ -221,23 +229,23 @@ struct GroupInput {
 
 async fn create_group(
     group: web::Json<GroupInput>,
-    mongo_client: web::Data<Collection<Document>>
+    mongo_client: web::Data<Collection<Group>>
 ) -> impl Responder {
     let max_id = mongo_client
         .find(None, None)
         .await
         .unwrap()
-        .try_collect::<Vec<Document>>()
+        .try_collect::<Vec<Group>>()
         .await
         .unwrap()
         .iter()
-        .filter_map(|doc| doc.get_i32("id").ok())
+        .map(|doc| doc.id)
         .max()
         .unwrap_or(-1);
 
-    let new_group = doc! {
-        "id": max_id + 1,
-        "name": &group.name
+    let new_group = Group {
+        id: max_id + 1,
+        name: group.name.clone(),
     };
 
     match mongo_client.insert_one(new_group, None).await {
@@ -249,24 +257,53 @@ async fn create_group(
 async fn update_group(
     id: web::Path<i32>,
     group: web::Json<GroupInput>,
-    mongo_client: web::Data<Collection<Document>>
+    mongo_client: web::Data<Collection<Group>>
 ) -> impl Responder {
     match mongo_client.update_one(
         doc! { "id": id.into_inner() },
         doc! { "$set": { "name": &group.name } },
         None
     ).await {
-        Ok(_) => HttpResponse::Ok().finish(),
+        Ok(result) => {
+            if result.modified_count == 0 {
+                HttpResponse::NotFound().finish()
+            } else {
+                HttpResponse::Ok().finish()
+            }
+        },
         Err(e) => HttpResponse::InternalServerError().body(e.to_string())
     }
 }
 
 async fn delete_group(
     id: web::Path<i32>,
-    mongo_client: web::Data<Collection<Document>>
+    mongo_client: web::Data<Collection<Group>>,
+    pool: web::Data<PgPool>
 ) -> impl Responder {
+
+    match sqlx::query("SELECT COUNT(*) FROM students WHERE group_id = $1")
+        .bind(id.as_ref())
+        .fetch_one(pool.get_ref())
+        .await
+    {
+        Ok(row) => {
+            let count: i64 = row.get(0);
+            if count > 0 {
+                return HttpResponse::BadRequest().body("Cannot delete group with existing students");
+            }
+        },
+        Err(e) => return HttpResponse::InternalServerError().body(e.to_string()),
+    }
+
+    // If no students exist in this group, proceed with deletion
     match mongo_client.delete_one(doc! { "id": id.into_inner() }, None).await {
-        Ok(_) => HttpResponse::Ok().finish(),
+        Ok(result) => {
+            if result.deleted_count == 0 {
+                HttpResponse::NotFound().finish()
+            } else {
+                HttpResponse::Ok().finish()
+            }
+        },
         Err(e) => HttpResponse::InternalServerError().body(e.to_string())
     }
 }

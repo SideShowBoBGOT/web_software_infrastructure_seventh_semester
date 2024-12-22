@@ -3,14 +3,9 @@ use actix_cors::Cors;
 use mongodb::Client as MongoClient;
 use std::env;
 use sqlx::postgres::PgPoolOptions;
+use crate::routes::Group;
 
 mod routes;
-
-#[derive(serde::Serialize, serde::Deserialize, Debug)]
-struct Group {
-    id: i32,
-    name: String,
-}
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -50,7 +45,7 @@ async fn main() -> std::io::Result<()> {
         .expect("Failed to connect to MongoDB");
     let mongo_db = mongo_client.database(&mongo_db);
     let mongo_collection = mongo_db.collection::<Group>(&mongo_collection);
-
+    println!("Collection configured: {}", mongo_collection.name());
     println!("Starting server on port {}", backend_port);
     HttpServer::new(move || {
         // Configure CORS

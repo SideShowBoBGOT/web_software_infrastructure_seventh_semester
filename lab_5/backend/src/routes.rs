@@ -1,9 +1,9 @@
-use actix_web::{web, App, HttpResponse, HttpServer, Responder};
+use actix_web::{web, HttpResponse, Responder};
 use actix_multipart::Multipart;
 use futures::{StreamExt, TryStreamExt};
 use serde::{Deserialize, Serialize};
-use tokio_postgres::{Client as PgClient, NoTls};
-use mongodb::{Client as MongoClient, Collection};
+use tokio_postgres::{Client as PgClient};
+use mongodb::{Collection};
 use mongodb::bson::{doc, Document};
 
 #[derive(Serialize, Deserialize)]
@@ -43,7 +43,7 @@ async fn get_students(pg_client: web::Data<PgClient>) -> impl Responder {
 async fn get_student(id: web::Path<i32>, pg_client: web::Data<PgClient>) -> impl Responder {
     match pg_client.query_one(
         "SELECT id, name, surname, group_id, image_data FROM students WHERE id = $1",
-        &[&id]
+        &[id.as_ref()]
     ).await {
         Ok(row) => {
             let student = Student {
@@ -171,9 +171,9 @@ async fn update_student(
     };
 
     let result = if has_new_image {
-        pg_client.execute(query, &[&name, &surname, &group_id, &image_data, &id]).await
+        pg_client.execute(query, &[&name, &surname, &group_id, &image_data, id.as_ref()]).await
     } else {
-        pg_client.execute(query, &[&name, &surname, &group_id, &id]).await
+        pg_client.execute(query, &[&name, &surname, &group_id, id.as_ref()]).await
     };
 
     match result {
@@ -183,7 +183,7 @@ async fn update_student(
 }
 
 async fn delete_student(id: web::Path<i32>, pg_client: web::Data<PgClient>) -> impl Responder {
-    match pg_client.execute("DELETE FROM students WHERE id = $1", &[&id]).await {
+    match pg_client.execute("DELETE FROM students WHERE id = $1", &[id.as_ref()]).await {
         Ok(_) => HttpResponse::Ok().finish(),
         Err(e) => HttpResponse::InternalServerError().body(e.to_string())
     }

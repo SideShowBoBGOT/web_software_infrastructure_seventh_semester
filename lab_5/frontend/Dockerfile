@@ -13,10 +13,7 @@ RUN apt-get install -y libssl3 ca-certificates
 COPY --from=builder /app/target/release/lab_5_frontend ./server
 
 COPY static ./static
-COPY .env .
 
-ARG PORT
-ENV PORT=${PORT}
-EXPOSE ${PORT}
+EXPOSE ${FRONTEND_PORT}
 
 CMD ["./server"]

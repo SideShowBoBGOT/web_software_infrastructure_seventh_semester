@@ -1,11 +1,15 @@
 version: '3.8'
 
 services:
-  web:
-    build: .
+  frontend:
+    build:
+      context: ./frontend
     env_file:
       - .env
     ports:
-      - "${PORT}:${PORT}"
-    volumes:
-      - ./static:/app/static
+      - "${FRONTEND_PORT}:${FRONTEND_PORT}"
+    networks:
+      - app-network
+networks:
+  app-network:
+    driver: bridge

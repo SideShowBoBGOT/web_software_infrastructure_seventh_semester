@@ -6,8 +6,8 @@ use std::env;
 async fn main() -> std::io::Result<()> {
     dotenv().ok();
 
-    let port = env::var("PORT").expect("PORT must be set");
-    let host = env::var("HOST").expect("HOST must be set");
+    let port = env::var("FRONTEND_PORT").expect("FRONTEND_PORT must be set");
+    let host = env::var("FRONTEND_HOST").expect("FRONTEND_HOST must be set");
     let bind_address = format!("{}:{}", host, port);
 
     HttpServer::new(move || {

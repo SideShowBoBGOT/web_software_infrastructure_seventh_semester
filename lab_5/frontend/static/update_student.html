@@ -54,35 +54,44 @@
     </section>
 </main>
 <script>
-    // Get student ID from URL parameters
     const urlParams = new URLSearchParams(window.location.search);
     const studentId = urlParams.get('id');
 
-    // Load student data
     async function loadStudentData() {
-        try {
-            const response = await fetch(`${window.API_BASE_URL}/api/students/${studentId}`);
-            const student = await response.json();
-
-            // Populate form fields
-            document.getElementById('studentId').value = student.id;
-            document.getElementById('studentName').value = student.name;
-            document.getElementById('studentSurname').value = student.surname;
-            document.getElementById('currentPhoto').src = student.photoUrl;
-            document.getElementById('studentGroup').value = student.groupId;
-        } catch (error) {
-            console.error('Error loading student data:', error);
-            alert('Failed to load student data');
+    try {
+        const response = await fetch(`${window.API_BASE_URL}/api/students/${studentId}`);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
         }
+        const student = await response.json();
+
+        document.getElementById('studentId').value = student.id;
+        document.getElementById('studentName').value = student.name;
+        document.getElementById('studentSurname').value = student.surname;
+        document.getElementById('currentPhoto').src = `${window.API_BASE_URL}/api/students/image/${student.id}`;
+        document.getElementById('currentPhoto').onerror = function() {
+            this.src = '/static/img/placeholder.png';
+        };
+        document.getElementById('studentGroup').value = student.group_id;
+    } catch (error) {
+        console.error('Error loading student data:', error);
+        alert('Failed to load student data');
     }
+}
 
     async function loadGroups() {
         try {
             const response = await fetch(`${window.API_BASE_URL}/api/groups`);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
             const groups = await response.json();
-            // Populate group dropdown
-            const groupSelect = document.getElementById('studentGroup');
-            // Implementation here
+            
+            const formSelect = document.getElementById('studentGroup');
+            formSelect.innerHTML = '<option value="">Select Group</option>';
+            groups.forEach(group => {
+                formSelect.innerHTML += `<option value="${group.id}">${group.name}</option>`;
+            });
         } catch (error) {
             console.error('Error loading groups:', error);
         }
@@ -93,7 +102,7 @@
         const formData = new FormData(event.target);
 
         try {
-            const response = await fetch(`/api/students/${studentId}`, {
+            const response = await fetch(`${window.API_BASE_URL}/api/students/${studentId}`, {
                 method: 'PUT',
                 body: formData
             });
@@ -102,26 +111,34 @@
                 alert('Student updated successfully');
                 window.location.href = '/students';
             } else {
-                throw new Error('Failed to update student');
+                const errorText = await response.text();
+                throw new Error(errorText || 'Failed to update student');
             }
         } catch (error) {
             console.error('Error updating student:', error);
-            alert('Failed to update student');
+            alert(error.message || 'Failed to update student');
         }
     }
 
-    // Load data when page loads
     document.addEventListener('DOMContentLoaded', () => {
         if (!studentId) {
             alert('No student ID provided');
             window.location.href = '/students';
             return;
         }
-        loadStudentData();
-        loadGroups();
+        loadGroups().then(() => loadStudentData());
 
-        // Add form submit event listener
         document.getElementById('updateStudentForm').addEventListener('submit', handleUpdateStudent);
+        
+        document.getElementById('studentPhoto').addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (file) {
+                if (!file.type.match('image/jpeg') && !file.type.match('image/png')) {
+                    alert('Please select a JPEG or PNG image.');
+                    event.target.value = '';
+                }
+            }
+        });
     });
 </script>
 </body>

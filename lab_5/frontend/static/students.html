@@ -163,25 +163,70 @@
         }
     }
 
-    // Filter students by group
+    async function loadGroups() {
+        try {
+            const response = await fetch(`${window.API_BASE_URL}/api/groups`);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const groups = await response.json();
+            
+            const filterSelect = document.getElementById('filterGroup');
+            const formSelect = document.getElementById('studentGroup');
+            
+            filterSelect.innerHTML = '<option value="">All Groups</option>';
+            formSelect.innerHTML = '<option value="">Select Group</option>';
+            
+            groups.forEach(group => {
+                filterSelect.innerHTML += `<option value="${group.id}">${group.name}</option>`;
+                formSelect.innerHTML += `<option value="${group.id}">${group.name}</option>`;
+            });
+        } catch (error) {
+            console.error('Error loading groups:', error);
+        }
+    }
+
     document.getElementById('filterGroup').addEventListener('change', async function(event) {
         const groupId = event.target.value;
         try {
             const url = groupId ? `${window.API_BASE_URL}/api/students?group=${groupId}` : `${window.API_BASE_URL}/api/students`;
             const response = await fetch(url);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
             const students = await response.json();
-            // Update table with filtered students
-            // Implementation here
+            const table = document.getElementById('studentsTable');
+            table.innerHTML = '';
+            
+            students.forEach(student => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${student.id}</td>
+                    <td>
+                        <img src="${window.API_BASE_URL}/api/students/image/${student.id}" 
+                            alt="Student Photo" 
+                            width="160"
+                            height="120"
+                            onerror="this.src='/static/img/placeholder.png'">
+                    </td>
+                    <td>${student.name}</td>
+                    <td>${student.surname}</td>
+                    <td>${student.group_id}</td>
+                    <td>
+                        <a href="/update-student?id=${student.id}">Edit</a>
+                        <button onclick="deleteStudent(${student.id})">Delete</button>
+                    </td>
+                `;
+                table.appendChild(row);
+            });
         } catch (error) {
             console.error('Error filtering students:', error);
         }
     });
 
-    // Load initial data when page loads
     document.addEventListener('DOMContentLoaded', () => {
+        loadGroups();
         loadStudents();
-
-        // Add form submit event listener
         document.getElementById('addStudentForm').addEventListener('submit', handleAddStudent);
     });
 </script>

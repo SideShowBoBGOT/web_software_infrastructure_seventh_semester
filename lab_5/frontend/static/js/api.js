@@ -44,11 +44,8 @@ const API = {
     },
 
     students: {
-        getAll: async (groupId = null) => {
-            const url = groupId ?
-                `/api/students?group=${groupId}` :
-                '/api/students';
-            return API.fetchJson(url);
+        getAll: async () => {
+            return API.fetchJson('/api/students');
         },
         get: async (id) => {
             return API.fetchJson(`/api/students/${id}`);

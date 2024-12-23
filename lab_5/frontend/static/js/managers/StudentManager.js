@@ -30,8 +30,21 @@ class StudentManager {
 
     async loadStudents(groupId = null) {
         try {
-            const students = await API.students.getAll(groupId);
-            this.renderStudents(students);
+            console.log("groupId: " + groupId);
+
+            const students = await API.students.getAll();
+            
+            console.log("students: ");
+            console.log(students);
+            
+            const filteredStudents = groupId !== null
+                ? students.filter(student => Number(student.group_id) === Number(groupId)) 
+                : students;
+            
+            console.log("filteredStudents: ");
+            console.log(filteredStudents);
+            
+            this.renderStudents(filteredStudents);
         } catch (error) {
             Utils.handleApiError(error, 'load students');
         }

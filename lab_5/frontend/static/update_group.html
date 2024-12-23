@@ -8,8 +8,8 @@
 <header>
     <h1>Update Group Information</h1>
     <nav>
-        <a href="/students">Back to Groups</a> |
-        <a href="/groups">Students</a>
+        <a href="/groups">Back to Groups</a> |
+        <a href="/students">Students</a>
     </nav>
 </header>
 
@@ -30,63 +30,13 @@
             </div>
         </form>
     </section>
-
-
 </main>
+
+<script src="/static/js/api.js"></script>
+<script src="/static/js/utils.js"></script>
+<script src="/static/js/managers/GroupUpdater.js"></script>
 <script>
-    const urlParams = new URLSearchParams(window.location.search);
-    const groupId = urlParams.get('id');
-
-    async function loadGroupData() {
-        try {
-            const response = await fetch(`${window.API_BASE_URL}/api/groups/${groupId}`);
-            const group = await response.json();
-
-            // Populate form fields
-            document.getElementById('groupId').value = group.id;
-            document.getElementById('groupName').value = group.name;
-        } catch (error) {
-            console.error('Error loading group data:', error);
-            alert('Failed to load group data');
-        }
-    }
-
-    async function handleUpdateGroup(event) {
-        event.preventDefault();
-        const formData = new FormData(event.target);
-
-        try {
-            const response = await fetch(`${window.API_BASE_URL}/api/groups/${groupId}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    name: formData.get('groupName')
-                })
-            });
-
-            if (response.ok) {
-                alert('Group updated successfully');
-                window.location.href = '/groups';
-            } else {
-                throw new Error('Failed to update group');
-            }
-        } catch (error) {
-            console.error('Error updating group:', error);
-            alert('Failed to update group');
-        }
-    }
-
-    document.addEventListener('DOMContentLoaded', () => {
-        if (!groupId) {
-            alert('No group ID provided');
-            window.location.href = '/groups';
-            return;
-        }
-        loadGroupData();
-        document.getElementById('updateGroupForm').addEventListener('submit', handleUpdateGroup);
-    });
+    const groupUpdater = new GroupUpdater();
 </script>
 </body>
 </html>

@@ -45,7 +45,7 @@
         <h2>Student List</h2>
         <div>
             <label for="filterGroup">Filter by Group:</label>
-            <select id="filterGroup" name="filterGroup">
+            <select id="filterGroup">
                 <option value="">All Groups</option>
             </select>
         </div>
@@ -61,174 +61,17 @@
                 <th>Actions</th>
             </tr>
             </thead>
-            <tbody id="studentsTable">
-            <!-- Example row -->
-                <tr>
-                    <td>1</td>
-                    <td><img src="/static/img/placeholder.png" alt="Student Photo" width="160" height="120"></td>
-                    <td>John</td>
-                    <td>Doe</td>
-                    <td>Group A</td>
-                    <td>
-                        <a href="/update-student?id=1">Edit</a>
-                        <button onclick="deleteStudent(1)">Delete</button>
-                    </td>
-                </tr>
-            </tbody>
+            <tbody id="studentsTable"></tbody>
         </table>
     </section>
 </main>
+
+<script src="/static/js/api.js"></script>
+<script src="/static/js/utils.js"></script>
+<script src="/static/js/validators/photoValidator.js"></script>
+<script src="/static/js/managers/StudentManager.js"></script>
 <script>
-    async function loadStudents() {
-        try {
-            const response = await fetch(`${window.API_BASE_URL}/api/students`);
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            const text = await response.text();
-            console.log('Raw response:', text);
-            
-            const students = JSON.parse(text);
-            console.log('Parsed students:', students);
-            
-            const table = document.getElementById('studentsTable');
-            table.innerHTML = '';
-            
-            students.forEach(student => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${student.id}</td>
-                    <td>
-                        <img src="${window.API_BASE_URL}/api/students/image/${student.id}" 
-                            alt="Student Photo" 
-                            width="160"
-                            height="120"
-                            onerror="this.src='/static/img/placeholder.png'">
-                    </td>
-                    <td>${student.name}</td>
-                    <td>${student.surname}</td>
-                    <td>${student.group_id}</td>
-                    <td>
-                        <a href="/update-student?id=${student.id}">Edit</a>
-                        <button onclick="deleteStudent(${student.id})">Delete</button>
-                    </td>
-                `;
-                table.appendChild(row);
-            });
-        } catch (error) {
-            console.error('Error loading students:', error);
-        }
-    }
-
-    async function handleAddStudent(event) {
-        event.preventDefault();
-        const formData = new FormData(event.target);
-
-        try {
-            const response = await fetch('/api/students', {
-                method: 'POST',
-                body: formData
-            });
-
-            if (response.ok) {
-                alert('Student added successfully');
-                event.target.reset();
-                loadStudents();
-            } else {
-                throw new Error('Failed to add student');
-            }
-        } catch (error) {
-            console.error('Error adding student:', error);
-            alert('Failed to add student');
-        }
-    }
-
-    async function deleteStudent(id) {
-        if (confirm('Are you sure you want to delete this student?')) {
-            try {
-                const response = await fetch(`${window.API_BASE_URL}/api/students/${id}`, {
-                    method: 'DELETE'
-                });
-
-                if (response.ok) {
-                    alert('Student deleted successfully');
-                    loadStudents();
-                } else {
-                    throw new Error('Failed to delete student');
-                }
-            } catch (error) {
-                console.error('Error deleting student:', error);
-                alert('Failed to delete student');
-            }
-        }
-    }
-
-    async function loadGroups() {
-        try {
-            const response = await fetch(`${window.API_BASE_URL}/api/groups`);
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            const groups = await response.json();
-            
-            const filterSelect = document.getElementById('filterGroup');
-            const formSelect = document.getElementById('studentGroup');
-            
-            filterSelect.innerHTML = '<option value="">All Groups</option>';
-            formSelect.innerHTML = '<option value="">Select Group</option>';
-            
-            groups.forEach(group => {
-                filterSelect.innerHTML += `<option value="${group.id}">${group.name}</option>`;
-                formSelect.innerHTML += `<option value="${group.id}">${group.name}</option>`;
-            });
-        } catch (error) {
-            console.error('Error loading groups:', error);
-        }
-    }
-
-    document.getElementById('filterGroup').addEventListener('change', async function(event) {
-        const groupId = event.target.value;
-        try {
-            const url = groupId ? `${window.API_BASE_URL}/api/students?group=${groupId}` : `${window.API_BASE_URL}/api/students`;
-            const response = await fetch(url);
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            const students = await response.json();
-            const table = document.getElementById('studentsTable');
-            table.innerHTML = '';
-            
-            students.forEach(student => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${student.id}</td>
-                    <td>
-                        <img src="${window.API_BASE_URL}/api/students/image/${student.id}" 
-                            alt="Student Photo" 
-                            width="160"
-                            height="120"
-                            onerror="this.src='/static/img/placeholder.png'">
-                    </td>
-                    <td>${student.name}</td>
-                    <td>${student.surname}</td>
-                    <td>${student.group_id}</td>
-                    <td>
-                        <a href="/update-student?id=${student.id}">Edit</a>
-                        <button onclick="deleteStudent(${student.id})">Delete</button>
-                    </td>
-                `;
-                table.appendChild(row);
-            });
-        } catch (error) {
-            console.error('Error filtering students:', error);
-        }
-    });
-
-    document.addEventListener('DOMContentLoaded', () => {
-        loadGroups();
-        loadStudents();
-        document.getElementById('addStudentForm').addEventListener('submit', handleAddStudent);
-    });
+    const studentManager = new StudentManager();
 </script>
 </body>
 </html>

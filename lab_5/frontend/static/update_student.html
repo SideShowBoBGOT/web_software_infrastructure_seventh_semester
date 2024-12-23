@@ -21,7 +21,7 @@
 
             <div>
                 <label for="currentPhoto">Current Photo:</label>
-                <img id="currentPhoto" src="/api/placeholder/150/150" alt="Current Student Photo" width="150">
+                <img id="currentPhoto" src="/static/img/placeholder.png" alt="Current Student Photo" width="150">
             </div>
 
             <div>
@@ -53,93 +53,13 @@
         </form>
     </section>
 </main>
+
+<script src="/static/js/api.js"></script>
+<script src="/static/js/utils.js"></script>
+<script src="/static/js/validators/photoValidator.js"></script>
+<script src="/static/js/managers/StudentUpdater.js"></script>
 <script>
-    const urlParams = new URLSearchParams(window.location.search);
-    const studentId = urlParams.get('id');
-
-    async function loadStudentData() {
-    try {
-        const response = await fetch(`${window.API_BASE_URL}/api/students/${studentId}`);
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const student = await response.json();
-
-        document.getElementById('studentId').value = student.id;
-        document.getElementById('studentName').value = student.name;
-        document.getElementById('studentSurname').value = student.surname;
-        document.getElementById('currentPhoto').src = `${window.API_BASE_URL}/api/students/image/${student.id}`;
-        document.getElementById('currentPhoto').onerror = function() {
-            this.src = '/static/img/placeholder.png';
-        };
-        document.getElementById('studentGroup').value = student.group_id;
-    } catch (error) {
-        console.error('Error loading student data:', error);
-        alert('Failed to load student data');
-    }
-}
-
-    async function loadGroups() {
-        try {
-            const response = await fetch(`${window.API_BASE_URL}/api/groups`);
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            const groups = await response.json();
-            
-            const formSelect = document.getElementById('studentGroup');
-            formSelect.innerHTML = '<option value="">Select Group</option>';
-            groups.forEach(group => {
-                formSelect.innerHTML += `<option value="${group.id}">${group.name}</option>`;
-            });
-        } catch (error) {
-            console.error('Error loading groups:', error);
-        }
-    }
-
-    async function handleUpdateStudent(event) {
-        event.preventDefault();
-        const formData = new FormData(event.target);
-
-        try {
-            const response = await fetch(`${window.API_BASE_URL}/api/students/${studentId}`, {
-                method: 'PUT',
-                body: formData
-            });
-
-            if (response.ok) {
-                alert('Student updated successfully');
-                window.location.href = '/students';
-            } else {
-                const errorText = await response.text();
-                throw new Error(errorText || 'Failed to update student');
-            }
-        } catch (error) {
-            console.error('Error updating student:', error);
-            alert(error.message || 'Failed to update student');
-        }
-    }
-
-    document.addEventListener('DOMContentLoaded', () => {
-        if (!studentId) {
-            alert('No student ID provided');
-            window.location.href = '/students';
-            return;
-        }
-        loadGroups().then(() => loadStudentData());
-
-        document.getElementById('updateStudentForm').addEventListener('submit', handleUpdateStudent);
-        
-        document.getElementById('studentPhoto').addEventListener('change', function(event) {
-            const file = event.target.files[0];
-            if (file) {
-                if (!file.type.match('image/jpeg') && !file.type.match('image/png')) {
-                    alert('Please select a JPEG or PNG image.');
-                    event.target.value = '';
-                }
-            }
-        });
-    });
+    const studentUpdater = new StudentUpdater();
 </script>
 </body>
 </html>

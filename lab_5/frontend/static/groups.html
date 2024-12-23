@@ -37,113 +37,16 @@
                 <th>Actions</th>
             </tr>
             </thead>
-            <tbody id="groupsTable">
-            <!-- Example row -->
-            <tr>
-                <td>1</td>
-                <td>Group A</td>
-                <td>
-                    <a href="/update-group?id=1">Edit</a>
-                    <button onclick="deleteGroup(1)">Delete</button>
-                </td>
-            </tr>
-            </tbody>
+            <tbody id="groupsTable"></tbody>
         </table>
     </section>
 </main>
+
+<script src="/static/js/api.js"></script>
+<script src="/static/js/utils.js"></script>
+<script src="/static/js/managers/GroupManager.js"></script>
 <script>
-    async function loadGroups() {
-        try {
-            const response = await fetch(`${window.API_BASE_URL}/api/groups`);
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            const groups = await response.json();
-            console.log('Received groups:', groups); // Debug log
-
-            const table = document.getElementById('groupsTable');
-            table.innerHTML = ''; // Clear existing rows
-
-            groups.forEach(group => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${group.id}</td>
-                    <td>${group.name}</td>
-                    <td>
-                        <a href="/update-group?id=${group.id}">Edit</a>
-                        <button onclick="deleteGroup(${group.id})">Delete</button>
-                    </td>
-                `;
-                table.appendChild(row);
-            });
-        } catch (error) {
-            console.error('Error loading groups:', error);
-            // Log the actual response for debugging
-            try {
-                const response = await fetch(`${window.API_BASE_URL}/api/groups`);
-                const text = await response.text();
-                console.error('Raw response:', text);
-            } catch (e) {
-                console.error('Error getting raw response:', e);
-            }
-        }
-    }
-
-    async function handleAddGroup(event) {
-        event.preventDefault();
-        const formData = new FormData(event.target);
-
-        try {
-            const response = await fetch(`${window.API_BASE_URL}/api/groups`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    name: formData.get('groupName')
-                })
-            });
-
-            if (response.ok) {
-                alert('Group added successfully');
-                event.target.reset();
-                loadGroups();
-            } else {
-                throw new Error('Failed to add group');
-            }
-        } catch (error) {
-            console.error('Error adding group:', error);
-            alert('Failed to add group');
-        }
-    }
-
-    async function deleteGroup(id) {
-        if (confirm('Are you sure you want to delete this group?')) {
-            try {
-                const response = await fetch(`${window.API_BASE_URL}/api/groups/${id}`, {
-                    method: 'DELETE'
-                });
-
-                if (response.ok) {
-                    alert('Group deleted successfully');
-                    loadGroups();
-                } else {
-                    throw new Error('Failed to delete group');
-                }
-            } catch (error) {
-                console.error('Error deleting group:', error);
-                alert('Failed to delete group');
-            }
-        }
-    }
-
-    // Load initial data when page loads
-    document.addEventListener('DOMContentLoaded', () => {
-        loadGroups();
-
-        // Add form submit event listener
-        document.getElementById('addGroupForm').addEventListener('submit', handleAddGroup);
-    });
+    const groupManager = new GroupManager();
 </script>
 </body>
 </html>

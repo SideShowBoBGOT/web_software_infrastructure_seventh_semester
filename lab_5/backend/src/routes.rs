@@ -37,9 +37,7 @@ async fn process_multipart_fields(mut payload: Multipart) -> Result<(String, Str
     let mut name = String::new();
     let mut surname = String::new();
     let mut group_id = 0;
-    let mut image_data = Vec::new();
-    let mut image_type = String::new();
-    let mut has_image = false;
+    let mut image: Option<(Vec<u8>, String)> = None;
 
     while let Some(Ok(mut field)) = payload.next().await {
         let field_name = field.content_disposition()
@@ -57,33 +55,30 @@ async fn process_multipart_fields(mut payload: Multipart) -> Result<(String, Str
                 "studentSurname" => surname = value,
                 "studentGroup" => group_id = value.parse().unwrap_or(0),
                 "studentPhoto" => {
-                    has_image = true;
                     if let Some(content_type) = field.content_type() {
-                        image_type = content_type.to_string();
-                        if !matches!(image_type.as_str(), "image/jpeg" | "image/png") {
-                            return Err(HttpResponse::BadRequest()
-                                .body("Invalid image format. Only JPEG and PNG are supported."));
+                        let image_type = content_type.to_string();
+                        if matches!(image_type.as_str(), "image/jpeg" | "image/png" | "image/jpg") {
+                            let mut image_data = Vec::new();
+                            while let Some(Ok(chunk)) = field.next().await {
+                                image_data.extend_from_slice(&chunk);
+                            }
+                            image = Some((image_data, image_type));
                         }
                     }
-                    while let Some(Ok(chunk)) = field.next().await {
-                        image_data.extend_from_slice(&chunk);
+                    if image.is_none() {
+                        return Err(HttpResponse::BadRequest()
+                            .body("Invalid image format. Only JPEG and PNG are supported."));
                     }
                 }
-                _ => {}
+                unrecognized_key => return Err(HttpResponse::BadRequest()
+                        .body(format!("Unrecognized key: {unrecognized_key}")))
             }
         }
     }
 
-    let image = if has_image {
-        Some((image_data, image_type))
-    } else {
-        None
-    };
-
     Ok((name, surname, group_id, image))
 }
 
-// Student handlers
 async fn get_students(pool: web::Data<PgPool>) -> impl Responder {
     let query = "SELECT id, name, surname, group_id FROM students";
     match sqlx::query_as::<_, Student>(query)
@@ -115,8 +110,9 @@ async fn get_student_image(id: web::Path<i32>, pool: web::Data<PgPool>) -> impl 
         Ok(Some(row)) => {
             if let (Some(image_data), Some(image_type)) = (row.image_data, row.image_type) {
                 let content_type = match image_type.as_str() {
-                    "image/png" | "image/jpeg" => image_type.as_str(),
-                    _ => "application/octet-stream",
+                    "image/png" | "image/jpeg" | "image/jpg" => image_type.as_str(),
+                    content_type => return HttpResponse::InternalServerError()
+                        .body(format!("Invalid image format stored on server: {content_type}")),
                 };
                 HttpResponse::Ok()
                     .content_type(content_type)
@@ -126,7 +122,8 @@ async fn get_student_image(id: web::Path<i32>, pool: web::Data<PgPool>) -> impl 
             }
         },
         Ok(None) => HttpResponse::NotFound().finish(),
-        Err(e) => HttpResponse::InternalServerError().body(e.to_string())
+        Err(e) => HttpResponse::InternalServerError()
+            .body(format!("Query error in get_student_image: {}", e.to_string()))
     }
 }
 

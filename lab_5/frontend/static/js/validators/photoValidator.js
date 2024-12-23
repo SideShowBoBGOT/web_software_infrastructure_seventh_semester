@@ -1,10 +1,11 @@
 const PhotoValidator = {
     validateFile(file) {
-        if (!file) return true;
+        // If no file is provided, validation passes (photo is optional)
+        if (!file || file.size === 0) return true;
 
         const validTypes = ['image/jpeg', 'image/png', 'image/jpg'];
         if (!validTypes.includes(file.type)) {
-            Utils.showAlert('Please select a JPEG or PNG image.');
+            Utils.showAlert('Please select a JPEG or PNG image, or leave the field empty.');
             return false;
         }
 

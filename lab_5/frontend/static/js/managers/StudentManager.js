@@ -2,6 +2,7 @@ class StudentManager {
     constructor() {
         this.bindEvents();
         this.initialize();
+        this.cleanup = null;
     }
 
     bindEvents() {
@@ -30,33 +31,43 @@ class StudentManager {
 
     async loadStudents(groupId = null) {
         try {
-            console.log("groupId: " + groupId);
-
             const students = await API.students.getAll();
-            
-            console.log("students: ");
-            console.log(students);
-            
-            const filteredStudents = groupId !== null
-                ? students.filter(student => Number(student.group_id) === Number(groupId)) 
-                : students;
-            
-            console.log("filteredStudents: ");
-            console.log(filteredStudents);
-            
-            this.renderStudents(filteredStudents);
+            let filteredStudents = students;
+
+            if (groupId && groupId !== 'all') {
+                filteredStudents = students.filter(student => 
+                    student.group_id.toString() === groupId.toString()
+                );
+            }
+
+            // Clean up previous blob URLs if they exist
+            if (this.cleanup) {
+                this.cleanup();
+            }
+            // Store new cleanup function
+            this.cleanup = await this.renderStudents(filteredStudents);
         } catch (error) {
             Utils.handleApiError(error, 'load students');
         }
     }
 
-    renderStudents(students) {
+    async renderStudents(students) {
         const table = document.getElementById('studentsTable');
-        table.innerHTML = students.map(student => `
-            <tr>
+        
+        // Clear the table first
+        table.innerHTML = '';
+
+        // Create and append rows one by one
+        for (const student of students) {
+            const row = document.createElement('tr');
+            
+            // Get image URL first
+            const imageUrl = await API.students.getImage(student.id) || '/static/img/placeholder.png';
+            
+            row.innerHTML = `
                 <td>${student.id}</td>
                 <td>
-                    <img src="${API.students.getImageUrl(student.id)}" 
+                    <img src="${imageUrl}" 
                         alt="Student Photo" 
                         width="160"
                         height="120"
@@ -69,19 +80,37 @@ class StudentManager {
                     <a href="/update-student?id=${student.id}">Edit</a>
                     <button onclick="studentManager.deleteStudent(${student.id})">Delete</button>
                 </td>
-            </tr>
-        `).join('');
+            `;
+            
+            table.appendChild(row);
+        }
+
+        // Clean up blob URLs when they're no longer needed
+        return () => {
+            const images = table.getElementsByTagName('img');
+            for (const img of images) {
+                if (img.src.startsWith('blob:')) {
+                    URL.revokeObjectURL(img.src);
+                }
+            }
+        };
     }
 
     async handleAddStudent(event) {
         event.preventDefault();
         const formData = new FormData(event.target);
         const photoFile = formData.get('studentPhoto');
-
-        if (!PhotoValidator.validateFile(photoFile)) {
+    
+        // Only validate if a photo was provided
+        if (photoFile.size > 0 && !PhotoValidator.validateFile(photoFile)) {
             return;
         }
-
+    
+        // If no photo was selected, remove it from formData to avoid sending empty file
+        if (!photoFile.size) {
+            formData.delete('studentPhoto');
+        }
+    
         try {
             await API.students.create(formData);
             Utils.showAlert('Student added successfully');

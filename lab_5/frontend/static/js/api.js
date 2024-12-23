@@ -66,7 +66,7 @@ const API = {
                 body: formData
             });
             if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+                throw new Error(`HTTP error! status: ${response.status} ${response.body}`);
             }
             return response;
         },
@@ -75,6 +75,28 @@ const API = {
                 method: 'DELETE'
             });
         },
-        getImageUrl: (id) => `${API.base_url}/api/students/image/${id}`
+        async getImage(id) {
+            try {
+                const response = await fetch(`${API.base_url}/api/students/image/${id}`);
+                if (!response.ok) {
+                    if (response.status === 404) {
+                        return null;
+                    }
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+    
+                console.log('Image response:', {
+                    status: response.status,
+                    type: response.headers.get('content-type'),
+                    size: response.headers.get('content-length')
+                });
+    
+                const blob = await response.blob();
+                return URL.createObjectURL(blob);
+            } catch (error) {
+                console.error(`Error fetching image for student ${id}:`, error);
+                return null;
+            }
+        },
     }
 };

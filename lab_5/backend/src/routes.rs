@@ -33,27 +33,40 @@ struct GroupInput {
     name: String,
 }
 
-async fn process_multipart_fields(mut payload: Multipart) -> Result<(String, String, i32, Option<(Vec<u8>, String)>), HttpResponse> {
-    let mut name = String::new();
-    let mut surname = String::new();
-    let mut group_id = 0;
-    let mut image: Option<(Vec<u8>, String)> = None;
+#[derive(Default)]
+struct StudentForm {
+    id: i32,
+    name: String,
+    surname: String,
+    group_id: i32,
+    image_data: Option<(Vec<u8>, String)>,
+}
+
+async fn process_multipart_fields(mut payload: Multipart) -> Result<StudentForm, HttpResponse> {
+    let mut student: StudentForm = Default::default();
+
+    // println!("Start process_multipart_fields");
 
     while let Some(Ok(mut field)) = payload.next().await {
         let field_name = field.content_disposition()
             .get_name()
             .unwrap_or("")
             .to_string();
+        
+        // println!("field_name: {}", field_name);
 
         let field_value = field.next().await
             .and_then(|c| c.ok())
             .map(|data| String::from_utf8_lossy(&data).to_string());
 
+        // println!("field_value: {:?}", field_value);
+
         if let Some(value) = field_value {
             match field_name.as_str() {
-                "studentName" => name = value,
-                "studentSurname" => surname = value,
-                "studentGroup" => group_id = value.parse().unwrap_or(0),
+                "studentId" => student.id = value.parse::<i32>().unwrap_or(0),
+                "studentName" => student.name = value,
+                "studentSurname" => student.surname = value,
+                "studentGroup" => student.group_id = value.parse().unwrap_or(0),
                 "studentPhoto" => {
                     if let Some(content_type) = field.content_type() {
                         let image_type = content_type.to_string();
@@ -62,10 +75,10 @@ async fn process_multipart_fields(mut payload: Multipart) -> Result<(String, Str
                             while let Some(Ok(chunk)) = field.next().await {
                                 image_data.extend_from_slice(&chunk);
                             }
-                            image = Some((image_data, image_type));
+                            student.image_data = Some((image_data, image_type));
                         }
                     }
-                    if image.is_none() {
+                    if student.image_data.is_none() {
                         return Err(HttpResponse::BadRequest()
                             .body("Invalid image format. Only JPEG and PNG are supported."));
                     }
@@ -76,7 +89,7 @@ async fn process_multipart_fields(mut payload: Multipart) -> Result<(String, Str
         }
     }
 
-    Ok((name, surname, group_id, image))
+    Ok(student)
 }
 
 async fn get_students(pool: web::Data<PgPool>) -> impl Responder {
@@ -128,20 +141,20 @@ async fn get_student_image(id: web::Path<i32>, pool: web::Data<PgPool>) -> impl 
 }
 
 async fn create_student(payload: Multipart, pool: web::Data<PgPool>) -> impl Responder {
-    let (name, surname, group_id, image_opt) = match process_multipart_fields(payload).await {
+    let student_form = match process_multipart_fields(payload).await {
         Ok(fields) => fields,
         Err(response) => return response,
     };
 
-    let query = match &image_opt {
+    let query = match &student_form.image_data {
         Some((image_data, image_type)) => {
             sqlx::query(
                 "INSERT INTO students (name, surname, group_id, image_data, image_type)
                  VALUES ($1, $2, $3, $4, $5)"
             )
-                .bind(&name)
-                .bind(&surname)
-                .bind(group_id)
+                .bind(&student_form.name)
+                .bind(&student_form.surname)
+                .bind(student_form.group_id)
                 .bind(image_data)
                 .bind(image_type)
         },
@@ -150,9 +163,9 @@ async fn create_student(payload: Multipart, pool: web::Data<PgPool>) -> impl Res
                 "INSERT INTO students (name, surname, group_id)
                  VALUES ($1, $2, $3)"
             )
-                .bind(&name)
-                .bind(&surname)
-                .bind(group_id)
+                .bind(&student_form.name)
+                .bind(&student_form.surname)
+                .bind(student_form.group_id)
         }
     };
 
@@ -167,21 +180,24 @@ async fn update_student(
     payload: Multipart,
     pool: web::Data<PgPool>
 ) -> impl Responder {
-    let (name, surname, group_id, image_opt) = match process_multipart_fields(payload).await {
+    // println!("Start update_student");
+    let student_form = match process_multipart_fields(payload).await {
         Ok(fields) => fields,
         Err(response) => return response,
     };
 
-    let query = match &image_opt {
+    // println!("update_student values: {}, {}, {}", student_form.name, student_form.surname, student_form.group_id);
+
+    let query = match &student_form.image_data {
         Some((image_data, image_type)) => {
             sqlx::query(
                 "UPDATE students
                  SET name = $1, surname = $2, group_id = $3, image_data = $4, image_type = $5
                  WHERE id = $6"
             )
-                .bind(&name)
-                .bind(&surname)
-                .bind(group_id)
+                .bind(&student_form.name)
+                .bind(&student_form.surname)
+                .bind(student_form.group_id)
                 .bind(image_data)
                 .bind(image_type)
                 .bind(id.into_inner())
@@ -192,16 +208,17 @@ async fn update_student(
                  SET name = $1, surname = $2, group_id = $3
                  WHERE id = $4"
             )
-                .bind(&name)
-                .bind(&surname)
-                .bind(group_id)
+                .bind(&student_form.name)
+                .bind(&student_form.surname)
+                .bind(student_form.group_id)
                 .bind(id.into_inner())
         }
     };
 
     match query.execute(pool.get_ref()).await {
         Ok(_) => HttpResponse::Ok().finish(),
-        Err(e) => HttpResponse::InternalServerError().body(e.to_string())
+        Err(e) => HttpResponse::InternalServerError()
+            .body(format!("Error update_student: {}", e.to_string()))
     }
 }
 

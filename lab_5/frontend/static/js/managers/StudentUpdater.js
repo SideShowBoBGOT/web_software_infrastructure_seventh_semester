@@ -78,21 +78,18 @@ class StudentUpdater {
         const formData = new FormData(event.target);
         const photoFile = formData.get('studentPhoto');
     
-        // Only validate if a photo was provided and has size
         if (photoFile && photoFile.size > 0) {
             if (!PhotoValidator.validateFile(photoFile)) {
                 return;
             }
         } else {
-            // If no new photo was selected, remove it from formData
             formData.delete('studentPhoto');
         }
-    
+
         try {
             await API.students.update(this.studentId, formData);
             Utils.showAlert('Student updated successfully');
             
-            // Clean up blob URL before navigation
             if (this.cleanup) {
                 this.cleanup();
             }

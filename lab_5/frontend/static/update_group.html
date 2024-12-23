@@ -26,7 +26,7 @@
 
             <div>
                 <button type="submit">Update Group</button>
-                <button type="button" onclick="window.location.href='groups.html'">Cancel</button>
+                <button type="button" onclick="window.location.href='/groups'">Cancel</button>
             </div>
         </form>
     </section>
@@ -68,7 +68,7 @@
 
             if (response.ok) {
                 alert('Group updated successfully');
-                window.location.href = 'groups.html';
+                window.location.href = '/groups';
             } else {
                 throw new Error('Failed to update group');
             }
@@ -81,7 +81,7 @@
     document.addEventListener('DOMContentLoaded', () => {
         if (!groupId) {
             alert('No group ID provided');
-            window.location.href = 'groups.html';
+            window.location.href = '/groups';
             return;
         }
         loadGroupData();

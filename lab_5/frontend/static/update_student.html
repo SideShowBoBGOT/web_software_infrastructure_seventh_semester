@@ -48,7 +48,7 @@
 
             <div>
                 <button type="submit">Update Student</button>
-                <button type="button" onclick="window.location.href='students.html'">Cancel</button>
+                <button type="button" onclick="window.location.href='/students'">Cancel</button>
             </div>
         </form>
     </section>
@@ -100,7 +100,7 @@
 
             if (response.ok) {
                 alert('Student updated successfully');
-                window.location.href = 'students.html';
+                window.location.href = '/students';
             } else {
                 throw new Error('Failed to update student');
             }
@@ -114,7 +114,7 @@
     document.addEventListener('DOMContentLoaded', () => {
         if (!studentId) {
             alert('No student ID provided');
-            window.location.href = 'students.html';
+            window.location.href = '/students';
             return;
         }
         loadStudentData();

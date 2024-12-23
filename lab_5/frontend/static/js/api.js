@@ -78,25 +78,31 @@ const API = {
         async getImage(id) {
             try {
                 const response = await fetch(`${API.base_url}/api/students/image/${id}`);
+                
                 if (!response.ok) {
-                    if (response.status === 404) {
-                        return null;
-                    }
-                    throw new Error(`HTTP error! status: ${response.status}`);
+                    console.warn(`No image found for student ${id}, status: ${response.status}`);
+                    return null;
                 }
-    
-                console.log('Image response:', {
-                    status: response.status,
-                    type: response.headers.get('content-type'),
-                    size: response.headers.get('content-length')
-                });
-    
+
+                // Verify content type
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('image/')) {
+                    console.error(`Invalid content type for student ${id}: ${contentType}`);
+                    return null;
+                }
+
                 const blob = await response.blob();
+                if (blob.size === 0) {
+                    console.warn(`Empty image blob received for student ${id}`);
+                    return null;
+                }
+
+                // Create and return blob URL
                 return URL.createObjectURL(blob);
             } catch (error) {
                 console.error(`Error fetching image for student ${id}:`, error);
                 return null;
             }
-        },
+        }
     }
 };

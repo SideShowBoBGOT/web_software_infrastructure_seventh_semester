@@ -1,8 +1,8 @@
 class StudentManager {
     constructor() {
+        this.blobUrls = new Set(); // Track blob URLs for cleanup
         this.bindEvents();
         this.initialize();
-        this.cleanup = null;
     }
 
     bindEvents() {
@@ -45,7 +45,7 @@ class StudentManager {
                 this.cleanup();
             }
             // Store new cleanup function
-            this.cleanup = await this.renderStudents(filteredStudents);
+            await this.renderStudents(filteredStudents);
         } catch (error) {
             Utils.handleApiError(error, 'load students');
         }
@@ -53,6 +53,9 @@ class StudentManager {
 
     async renderStudents(students) {
         const table = document.getElementById('studentsTable');
+        
+        // Cleanup existing blob URLs
+        this.cleanupBlobUrls();
         
         // Clear the table first
         table.innerHTML = '';
@@ -62,38 +65,47 @@ class StudentManager {
             const row = document.createElement('tr');
             
             // Get image URL first
-            const imageUrl = await API.students.getImage(student.id) || '/static/img/placeholder.png';
+            let imageUrl = await API.students.getImage(student.id);
+            if (imageUrl) {
+                this.blobUrls.add(imageUrl); // Track the new blob URL
+            } else {
+                imageUrl = '/static/img/placeholder.png'; // Fallback image
+            }
             
             row.innerHTML = `
                 <td>${student.id}</td>
                 <td>
                     <img src="${imageUrl}" 
                         alt="Student Photo" 
+                        class="student-photo"
+                        onerror="this.src='/static/img/placeholder.png'"
                         width="160"
-                        height="120"
-                        onerror="this.src='/static/img/placeholder.png'">
+                        height="120">
                 </td>
                 <td>${student.name}</td>
                 <td>${student.surname}</td>
                 <td>${student.group_id}</td>
                 <td>
-                    <a href="/update-student?id=${student.id}">Edit</a>
-                    <button onclick="studentManager.deleteStudent(${student.id})">Delete</button>
+                    <a href="/update-student?id=${student.id}" class="edit-btn">Edit</a>
+                    <button onclick="studentManager.deleteStudent(${student.id})" class="delete-btn">Delete</button>
                 </td>
             `;
             
             table.appendChild(row);
         }
+    }
 
-        // Clean up blob URLs when they're no longer needed
-        return () => {
-            const images = table.getElementsByTagName('img');
-            for (const img of images) {
-                if (img.src.startsWith('blob:')) {
-                    URL.revokeObjectURL(img.src);
-                }
-            }
-        };
+    cleanupBlobUrls() {
+        // Revoke all existing blob URLs
+        for (const url of this.blobUrls) {
+            URL.revokeObjectURL(url);
+        }
+        this.blobUrls.clear();
+    }
+
+    // Make sure to cleanup when the component is destroyed
+    destroy() {
+        this.cleanupBlobUrls();
     }
 
     async handleAddStudent(event) {

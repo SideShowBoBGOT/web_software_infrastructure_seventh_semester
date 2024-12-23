@@ -2,6 +2,8 @@ use actix_web::{web, App, HttpServer};
 use actix_cors::Cors;
 use mongodb::Client as MongoClient;
 use std::env;
+use actix_web::middleware::Logger;
+use env_logger::Env;
 use sqlx::postgres::PgPoolOptions;
 use crate::routes::Group;
 
@@ -9,6 +11,8 @@ mod routes;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    env_logger::init_from_env(Env::default().default_filter_or("info"));
+
     let pg_host = env::var("POSTGRES_HOST").expect("POSTGRES_HOST must be set");
     let pg_port = env::var("POSTGRES_PORT").expect("POSTGRES_PORT must be set");
     let pg_user = env::var("POSTGRES_USER").expect("POSTGRES_USER must be set");
@@ -30,6 +34,7 @@ async fn main() -> std::io::Result<()> {
         .parse::<u16>()
         .expect("BACKEND_PORT must be a valid port number");
 
+    log::info!("Connecting to PostgreSQL database...");
     let database_url = format!("postgresql://{pg_user}:{pg_password}@{pg_host}:{pg_port}/{pg_db}");
 
     let pool = PgPoolOptions::new()
@@ -38,20 +43,20 @@ async fn main() -> std::io::Result<()> {
         .connect(&database_url)
         .await
         .expect("Failed to create pool");
+    log::info!("Successfully connected to PostgreSQL");
 
+    log::info!("Connecting to MongoDB...");
     let mongo_uri = format!("mongodb://{}:{}", mongo_host, mongo_port);
     let mongo_client = MongoClient::with_uri_str(&mongo_uri)
         .await
         .expect("Failed to connect to MongoDB");
     let mongo_db = mongo_client.database(&mongo_db);
     let mongo_collection = mongo_db.collection::<Group>(&mongo_collection);
-    println!("Collection configured: {}", mongo_collection.name());
-    println!("Starting server on port {}", backend_port);
+    log::info!("MongoDB collection configured: {}", mongo_collection.name());
+    log::info!("Starting server on port {}", backend_port);
+
     HttpServer::new(move || {
-        // Configure CORS
         let cors = Cors::default()
-            // .allowed_origin(&format!("http://localhost:{}", frontend_port))
-            // .allowed_origin(&format!("http://{}:{}", frontend_host, frontend_port))
             .allow_any_origin()
             .allowed_methods(vec!["GET", "POST", "PUT", "DELETE"])
             .allowed_headers(vec![
@@ -63,6 +68,8 @@ async fn main() -> std::io::Result<()> {
             .max_age(3600);
 
         App::new()
+            .wrap(Logger::default()) // Add default logger middleware
+            .wrap(Logger::new("%a %r %s %b %{Referer}i %{User-Agent}i %T")) // Or custom format
             .wrap(cors)
             .app_data(web::Data::new(pool.clone()))
             .app_data(web::Data::new(mongo_collection.clone()))

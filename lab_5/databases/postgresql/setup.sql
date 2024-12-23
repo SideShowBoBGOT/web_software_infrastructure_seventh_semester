@@ -1,14 +1,18 @@
 CREATE TABLE students (
     id SERIAL PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
-    surname VARCHAR(255) NOT NULL,
-    group_id INT NOT NULL,
+    name VARCHAR(255) NOT NULL CHECK (LENGTH(name) > 0),
+    surname VARCHAR(255) NOT NULL CHECK (LENGTH(surname) > 0),
+    group_id INT NOT NULL CHECK (group_id >= 0),
     image_data BYTEA,
-    image_type VARCHAR(30)
+    image_type VARCHAR(30) CHECK (image_type IN ('image/jpeg', 'image/png', 'image/jpg')),
+    CONSTRAINT image_data_type_check CHECK (
+        (image_data IS NULL AND image_type IS NULL) OR 
+        (image_data IS NOT NULL AND image_type IS NOT NULL)
+    )
 );
 
 INSERT INTO students (name, surname, group_id) VALUES
-    ('Сергій', 'Панченко', 0),
+    -- ('Сергій', 'Панченко', 0),
     -- ('Андрій', 'Ющенко', 0),
     -- ('Іван', 'Трикош', 0),
     -- ('Іван', 'Ляля', 0),
@@ -37,8 +41,8 @@ INSERT INTO students (name, surname, group_id) VALUES
     -- ('Андрій', 'Лисенко', 0),
     -- ('Михайло', 'Дідур', 0),
     
-    ('Тетяна', 'Луговець', 1),
-    ('Михайло', 'Мельник', 1),
+    -- ('Тетяна', 'Луговець', 1),
+    -- ('Михайло', 'Мельник', 1),
     -- ('Олексій', 'Горобець', 1),
     -- ('Вадим', 'Волков', 1),
     -- ('Ярослав', 'Орищенко', 1),
@@ -70,7 +74,7 @@ INSERT INTO students (name, surname, group_id) VALUES
     -- ('Лідія', 'Макарчук', 2),
     -- ('Юрій', 'Сергієнко', 2),
     -- ('Діана', 'Грицина', 2),
-    ('Денис', 'Бабіч', 2),
+    -- ('Денис', 'Бабіч', 2),
     -- ('Олександр', 'Дем`янчук', 2),
     -- ('Дмитро', 'Жмайло', 2),
     -- ('Віталій', 'Музичук', 2),

@@ -1,38 +1,27 @@
-.PHONY: all down restart clean rebuild dev build-no-cache
+ifneq (,$(wildcard ./.env))
+    include .env
+    export $(shell sed 's/=.*//' .env)
+endif
+
+.PHONY: all down restart clean rebuild print-env
 
 all: build
 
-# Normal build with cache
-build:
+print-env:
+	echo BACKEND_PORT is $(BACKEND_PORT)
+
+$(IMAGES_EXTERNAL_PATH):
+	mkdir $(IMAGES_EXTERNAL_PATH)
+
+build: | $(IMAGES_EXTERNAL_PATH)
 	docker-compose up --build
 
-# Clean build without any cache
-build-no-cache:
-	docker-compose build --no-cache
-	docker-compose up
-
-# Just restart containers
-restart:
-	docker-compose restart
-
-# Stop and remove containers
 down:
 	docker-compose down
 
-# Clean everything
 clean:
+	rm -rf $(IMAGES_EXTERNAL_PATH)
 	docker-compose down -v --rmi all
 	docker system prune -f
 
-# Complete rebuild
 rebuild: clean build
-
-# For frontend changes only
-rebuild-frontend:
-	docker-compose build --no-cache frontend
-	docker-compose up --build frontend
-
-# For backend changes only
-rebuild-backend:
-	docker-compose build --no-cache backend
-	docker-compose up --build backend

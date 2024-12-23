@@ -24,11 +24,6 @@ async fn main() -> std::io::Result<()> {
     let mongo_db = env::var("MONGO_INITDB_DATABASE").expect("MONGO_INITDB_DATABASE must be set");
     let mongo_collection = env::var("MONGO_COLLECTION").expect("MONGO_COLLECTION must be set");
 
-    let frontend_host = env::var("FRONTEND_HOST").expect("FRONTEND_HOST must be set");
-    let frontend_port = env::var("FRONTEND_PORT")
-        .expect("FRONTEND_PORT must be set")
-        .parse::<u16>()
-        .expect("FRONTEND_PORT must be a valid port number");
     let backend_port = env::var("BACKEND_PORT")
         .expect("BACKEND_PORT must be set")
         .parse::<u16>()

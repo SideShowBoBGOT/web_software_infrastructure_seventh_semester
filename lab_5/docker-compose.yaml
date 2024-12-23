@@ -28,6 +28,7 @@ services:
     volumes:
       - backend-cache:/usr/src/app/server/target
       - cargo-cache:/usr/local/cargo/registry
+      - ${IMAGES_EXTERNAL_PATH}:${IMAGES_PATH}
     depends_on:
       - mongo
       - postgresql

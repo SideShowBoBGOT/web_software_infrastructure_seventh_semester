@@ -2138,12 +2138,15 @@ dependencies = [
  "actix-cors",
  "actix-multipart",
  "actix-web",
+ "async-trait",
  "env_logger",
  "futures",
  "log",
  "mongodb",
  "serde",
  "sqlx",
+ "tokio",
+ "uuid",
 ]
 
 [[package]]

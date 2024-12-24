@@ -6,6 +6,32 @@ use sqlx::{PgPool, Row};
 use mongodb::Collection;
 use mongodb::bson::doc;
 
+use async_trait::async_trait;
+use std::error::Error;
+use std::path::PathBuf;
+use lazy_static::lazy_static;
+
+enum StorageType {
+    Blob,
+    Filesystem
+}
+
+lazy_static! {
+    static ref STORAGE_TYPE_STR: String = std::env::var("STORAGE_TYPE").expect("STORAGE_TYPE must be set");
+    static ref STORAGE_TYPE: StorageType = match STORAGE_TYPE_STR.as_str() {
+        "blob" => StorageType::Blob,
+        "filesystem" => StorageType::Filesystem,
+        _ => panic!("Invalid storage type")
+    };
+    static ref STUDENT_TABLE_NAME: &'static str = {
+        match *STORAGE_TYPE {
+            StorageType::Blob => "students_blob",
+            StorageType::Filesystem => "students_fs",
+        }
+    };
+    static ref IMAGES_PATH: PathBuf = std::env::var("IMAGES_PATH").expect("IMAGES_PATH must be set").into();
+}
+
 #[derive(Serialize, Deserialize, sqlx::FromRow)]
 struct Student {
     id: i32,
@@ -14,13 +40,7 @@ struct Student {
     group_id: i32,
 }
 
-#[derive(Serialize, Deserialize, sqlx::FromRow)]
-struct ImageData {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    image_data: Option<Vec<u8>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    image_type: Option<String>,
-}
+
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Group {
@@ -106,8 +126,8 @@ async fn process_multipart_fields(mut payload: Multipart) -> Result<StudentForm,
 
 async fn get_students(pool: web::Data<PgPool>) -> impl Responder {
     log::debug!("Fetching all students");
-    let query = "SELECT id, name, surname, group_id FROM students";
-    match sqlx::query_as::<_, Student>(query)
+    let query = format!("SELECT id, name, surname, group_id FROM {}", *STUDENT_TABLE_NAME);
+    match sqlx::query_as::<_, Student>(&query)
         .fetch_all(pool.get_ref())
         .await {
         Ok(students) => {
@@ -123,8 +143,8 @@ async fn get_students(pool: web::Data<PgPool>) -> impl Responder {
 
 async fn get_student(id: web::Path<i32>, pool: web::Data<PgPool>) -> impl Responder {
     log::debug!("Fetching student with id: {}", id);
-    let query = "SELECT id, name, surname, group_id FROM students WHERE id = $1";
-    match sqlx::query_as::<_, Student>(query)
+    let query = format!("SELECT id, name, surname, group_id FROM {} WHERE id = $1", *STUDENT_TABLE_NAME);
+    match sqlx::query_as::<_, Student>(&query)
         .bind(id.as_ref())
         .fetch_optional(pool.get_ref())
         .await {
@@ -143,32 +163,98 @@ async fn get_student(id: web::Path<i32>, pool: web::Data<PgPool>) -> impl Respon
     }
 }
 
+#[derive(Serialize, Deserialize, sqlx::FromRow)]
+struct ImageBlobData {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    image_data: Option<Vec<u8>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    image_type: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, sqlx::FromRow)]
+struct ImageFilesystemData {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    image_path: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    image_type: Option<String>,
+}
+
 async fn get_student_image(id: web::Path<i32>, pool: web::Data<PgPool>) -> impl Responder {
     log::debug!("Fetching image for student with id: {}", id);
-    let query = "SELECT image_data, image_type FROM students WHERE id = $1";
-    match sqlx::query_as::<_, ImageData>(query)
-        .bind(id.as_ref())
-        .fetch_optional(pool.get_ref())
-        .await {
-        Ok(Some(row)) => {
-            if let (Some(image_data), Some(image_type)) = (row.image_data.as_ref(), row.image_type.as_ref()) {
-                log::debug!("Successfully retrieved image of type: {} for student id: {}", image_type, id);
-                HttpResponse::Ok()
-                    .content_type(image_type.as_str())
-                    .body(image_data.clone())
-            } else {
-                log::debug!("No image found for student id: {}", id);
-                HttpResponse::NotFound().finish()
+
+    match *STORAGE_TYPE {
+        StorageType::Blob => {
+            let query = format!(
+                "SELECT image_data, image_type FROM {} WHERE id = $1",
+                *STUDENT_TABLE_NAME
+            );
+            match sqlx::query_as::<_, ImageBlobData>(&query)
+                .bind(id.as_ref())
+                .fetch_optional(pool.get_ref())
+                .await
+            {
+                Ok(Some(row)) => {
+                    if let (Some(image_data), Some(image_type)) = (row.image_data, row.image_type) {
+                        log::debug!("Successfully retrieved blob image of type: {} for student id: {}", image_type, id);
+                        HttpResponse::Ok()
+                            .content_type(image_type)
+                            .body(image_data)
+                    } else {
+                        log::debug!("No image found for student id: {}", id);
+                        HttpResponse::NotFound().finish()
+                    }
+                },
+                Ok(None) => {
+                    log::debug!("Student not found with id: {}", id);
+                    HttpResponse::NotFound().finish()
+                },
+                Err(e) => {
+                    log::error!("Query error in get_student_image: {}", e);
+                    HttpResponse::InternalServerError()
+                        .body(format!("Query error in get_student_image: {}", e))
+                }
             }
         },
-        Ok(None) => {
-            log::debug!("Student not found with id: {}", id);
-            HttpResponse::NotFound().finish()
-        },
-        Err(e) => {
-            log::error!("Query error in get_student_image: {}", e);
-            HttpResponse::InternalServerError()
-                .body(format!("Query error in get_student_image: {}", e.to_string()))
+        StorageType::Filesystem => {
+            let query = format!(
+                "SELECT image_path, image_type FROM {} WHERE id = $1",
+                *STUDENT_TABLE_NAME
+            );
+            match sqlx::query_as::<_, ImageFilesystemData>(&query)
+                .bind(id.as_ref())
+                .fetch_optional(pool.get_ref())
+                .await
+            {
+                Ok(Some(row)) => {
+                    if let (Some(image_path), Some(image_type)) = (row.image_path, row.image_type) {
+                        match tokio::fs::read(image_path).await {
+                            Ok(image_data) => {
+                                log::debug!("Successfully retrieved file image of type: {} for student id: {}", image_type, id);
+                                HttpResponse::Ok()
+                                    .content_type(image_type)
+                                    .body(image_data)
+                            },
+                            Err(e) => {
+                                log::error!("Failed to read image file: {}", e);
+                                HttpResponse::InternalServerError()
+                                    .body(format!("Failed to read image file: {}", e))
+                            }
+                        }
+                    } else {
+                        log::debug!("No image found for student id: {}", id);
+                        HttpResponse::NotFound().finish()
+                    }
+                },
+                Ok(None) => {
+                    log::debug!("Student not found with id: {}", id);
+                    HttpResponse::NotFound().finish()
+                },
+                Err(e) => {
+                    log::error!("Query error in get_student_image: {}", e);
+                    HttpResponse::InternalServerError()
+                        .body(format!("Query error in get_student_image: {}", e))
+                }
+            }
         }
     }
 }
@@ -182,43 +268,150 @@ async fn create_student(payload: Multipart, pool: web::Data<PgPool>) -> impl Res
         },
         Err(response) => {
             log::error!("Failed to process multipart fields");
-            return response
+            return response;
         },
     };
 
-    let query = match &student_form.image_data {
-        Some((image_data, image_type)) => {
-            log::debug!("Creating student with image, type: {}", image_type);
-            sqlx::query(
-                "INSERT INTO students (name, surname, group_id, image_data, image_type)
-                 VALUES ($1, $2, $3, $4, $5)"
-            )
-                .bind(&student_form.name)
-                .bind(&student_form.surname)
-                .bind(student_form.group_id)
-                .bind(image_data)
-                .bind(image_type)
-        },
-        None => {
-            log::debug!("Creating student without image");
-            sqlx::query(
-                "INSERT INTO students (name, surname, group_id)
-                 VALUES ($1, $2, $3)"
-            )
-                .bind(&student_form.name)
-                .bind(&student_form.surname)
-                .bind(student_form.group_id)
-        }
-    };
+    match *STORAGE_TYPE {
+        StorageType::Blob => {
+            let query = match &student_form.image_data {
+                Some((image_data, image_type)) => {
+                    log::debug!("Creating student with blob image, type: {}", image_type);
+                    sqlx::query(&format!(
+                        "INSERT INTO {} (name, surname, group_id, image_data, image_type)
+                         VALUES ($1, $2, $3, $4, $5)",
+                        *STUDENT_TABLE_NAME
+                    ))
+                        .bind(&student_form.name)
+                        .bind(&student_form.surname)
+                        .bind(student_form.group_id)
+                        .bind(image_data)
+                        .bind(image_type)
+                },
+                None => {
+                    log::debug!("Creating student without image");
+                    sqlx::query(&format!(
+                        "INSERT INTO {} (name, surname, group_id)
+                         VALUES ($1, $2, $3)",
+                        *STUDENT_TABLE_NAME
+                    ))
+                        .bind(&student_form.name)
+                        .bind(&student_form.surname)
+                        .bind(student_form.group_id)
+                }
+            };
 
-    match query.execute(pool.get_ref()).await {
-        Ok(_) => {
-            log::info!("Successfully created new student: {}", student_form.name);
-            HttpResponse::Ok().finish()
+            match query.execute(pool.get_ref()).await {
+                Ok(_) => {
+                    log::info!("Successfully created new student: {}", student_form.name);
+                    HttpResponse::Ok().finish()
+                },
+                Err(e) => {
+                    log::error!("Failed to create student: {}", e);
+                    HttpResponse::InternalServerError().body(e.to_string())
+                }
+            }
         },
-        Err(e) => {
-            log::error!("Failed to create student: {}", e);
-            HttpResponse::InternalServerError().body(e.to_string())
+        StorageType::Filesystem => {
+            let mut tx = match pool.begin().await {
+                Ok(tx) => tx,
+                Err(e) => {
+                    log::error!("Failed to start transaction: {}", e);
+                    return HttpResponse::InternalServerError()
+                        .body(format!("Failed to start transaction: {}", e));
+                }
+            };
+            let result = match &student_form.image_data {
+                Some((image_data, image_type)) => {
+                    let file_path = IMAGES_PATH
+                        .join(uuid::Uuid::new_v4().to_string());
+                    let file_path = file_path
+                        .to_str()
+                        .ok_or_else(|| {
+                            HttpResponse::InternalServerError()
+                                .body(format!("Can not convert to string: {:?}", file_path))
+                        })?;
+
+                    let db_result = sqlx::query(&format!(
+                        "INSERT INTO {} (name, surname, group_id, image_path, image_type)
+                         VALUES ($1, $2, $3, $4, $5) RETURNING id",
+                        *STUDENT_TABLE_NAME
+                    ))
+                        .bind(&student_form.name)
+                        .bind(&student_form.surname)
+                        .bind(student_form.group_id)
+                        .bind(file_path)
+                        .bind(image_type)
+                        .execute(&mut *tx)
+                        .await;
+
+                    match db_result {
+                        Ok(_) => {
+                            match tokio::fs::write(file_path, image_data).await {
+                                Ok(_) => {
+                                    if let Err(e) = tx.commit().await {
+                                        if let Err(cleanup_err) = tokio::fs::remove_file(&file_path).await {
+                                            log::error!("Failed to clean up file after commit failure: {}", cleanup_err);
+                                        }
+                                        log::error!("Failed to commit transaction: {}", e);
+                                        return HttpResponse::InternalServerError()
+                                            .body(format!("Failed to commit transaction: {}", e));
+                                    }
+                                    log::info!("Successfully created new student: {} with image", student_form.name);
+                                    HttpResponse::Ok().finish()
+                                },
+                                Err(e) => {
+                                    if let Err(rollback_err) = tx.rollback().await {
+                                        log::error!("Failed to rollback transaction: {}", rollback_err);
+                                    }
+                                    log::error!("Failed to write image file: {}", e);
+                                    HttpResponse::InternalServerError()
+                                        .body(format!("Failed to write image file: {}", e))
+                                }
+                            }
+                        },
+                        Err(e) => {
+                            if let Err(rollback_err) = tx.rollback().await {
+                                log::error!("Failed to rollback transaction: {}", rollback_err);
+                            }
+                            log::error!("Failed to create student record: {}", e);
+                            HttpResponse::InternalServerError().body(e.to_string())
+                        }
+                    }
+                },
+                None => {
+                    match sqlx::query(&format!(
+                        "INSERT INTO {} (name, surname, group_id)
+                         VALUES ($1, $2, $3)",
+                        *STUDENT_TABLE_NAME
+                    ))
+                        .bind(&student_form.name)
+                        .bind(&student_form.surname)
+                        .bind(student_form.group_id)
+                        .execute(&mut *tx)
+                        .await
+                    {
+                        Ok(_) => {
+                            if let Err(e) = tx.commit().await {
+                                log::error!("Failed to commit transaction: {}", e);
+                                return HttpResponse::InternalServerError()
+                                    .body(format!("Failed to commit transaction: {}", e));
+                            }
+                            log::info!("Successfully created new student: {}", student_form.name);
+                            HttpResponse::Ok().finish()
+                        },
+                        Err(e) => {
+                            if let Err(rollback_err) = tx.rollback().await {
+                                log::error!("Failed to rollback transaction: {}", rollback_err);
+                            }
+                            log::error!("Failed to create student: {}", e);
+                            HttpResponse::InternalServerError().body(e.to_string())
+                        }
+                    }
+                }
+            };
+
+            result
         }
     }
 }
@@ -236,55 +429,205 @@ async fn update_student(
         },
         Err(response) => {
             log::error!("Failed to process multipart fields for update");
-            return response
+            return response;
         },
     };
 
-    let query = match &student_form.image_data {
-        Some((image_data, image_type)) => {
-            log::debug!("Updating student with new image, type: {}", image_type);
-            sqlx::query(
-                "UPDATE students
-                 SET name = $1, surname = $2, group_id = $3, image_data = $4, image_type = $5
-                 WHERE id = $6"
-            )
-                .bind(&student_form.name)
-                .bind(&student_form.surname)
-                .bind(student_form.group_id)
-                .bind(image_data)
-                .bind(image_type)
-                .bind(id.as_ref())
-        },
-        None => {
-            log::debug!("Updating student without changing image");
-            sqlx::query(
-                "UPDATE students
-                 SET name = $1, surname = $2, group_id = $3
-                 WHERE id = $4"
-            )
-                .bind(&student_form.name)
-                .bind(&student_form.surname)
-                .bind(student_form.group_id)
-                .bind(id.as_ref())
-        }
-    };
+    match *STORAGE_TYPE {
+        StorageType::Blob => {
+            let query = match &student_form.image_data {
+                Some((image_data, image_type)) => {
+                    log::debug!("Updating student with new blob image, type: {}", image_type);
+                    sqlx::query(&format!(
+                        "UPDATE {}
+                         SET name = $1, surname = $2, group_id = $3, image_data = $4, image_type = $5
+                         WHERE id = $6",
+                        *STUDENT_TABLE_NAME
+                    ))
+                        .bind(&student_form.name)
+                        .bind(&student_form.surname)
+                        .bind(student_form.group_id)
+                        .bind(image_data)
+                        .bind(image_type)
+                        .bind(id.as_ref())
+                },
+                None => {
+                    log::debug!("Updating student without changing image");
+                    let query = format!(
+                        "UPDATE {} \
+                        SET name = $1, surname = $2, group_id = $3 \
+                        WHERE id = $4",
+                        *STUDENT_TABLE_NAME
+                    );
+                    sqlx::query(&query)
+                        .bind(&student_form.name)
+                        .bind(&student_form.surname)
+                        .bind(student_form.group_id)
+                        .bind(id.as_ref())
+                }
+            };
 
-    match query.execute(pool.get_ref()).await {
-        Ok(_) => {
-            log::info!("Successfully updated student id: {}", id);
-            HttpResponse::Ok().finish()
+            match query.execute(pool.get_ref()).await {
+                Ok(_) => {
+                    log::info!("Successfully updated student id: {}", id);
+                    HttpResponse::Ok().finish()
+                },
+                Err(e) => {
+                    log::error!("Error updating student: {}", e);
+                    HttpResponse::InternalServerError()
+                        .body(format!("Error update_student: {}", e))
+                }
+            }
         },
-        Err(e) => {
-            log::error!("Error updating student: {}", e);
-            HttpResponse::InternalServerError()
-                .body(format!("Error update_student: {}", e.to_string()))
+        StorageType::Filesystem => {
+            let mut tx = match pool.begin().await {
+                Ok(tx) => tx,
+                Err(e) => {
+                    log::error!("Failed to start transaction: {}", e);
+                    return HttpResponse::InternalServerError()
+                        .body(format!("Failed to start transaction: {}", e));
+                }
+            };
+
+            let result = match &student_form.image_data {
+                Some((image_data, image_type)) => {
+                    // First get the current image path within transaction
+                    let query = format!("SELECT image_path FROM {} WHERE id = $1", *STUDENT_TABLE_NAME);
+                    let current_path = match sqlx::query(&query)
+                        .bind(id.as_ref())
+                        .fetch_optional(&mut *tx)
+                        .await
+                    {
+                        Ok(row) => row.and_then(|r| r.get("image_path")),
+                        Err(e) => {
+                            if let Err(rollback_err) = tx.rollback().await {
+                                log::error!("Failed to rollback transaction: {}", rollback_err);
+                            }
+                            log::error!("Failed to fetch current image path: {}", e);
+                            return HttpResponse::InternalServerError()
+                                .body(format!("Failed to fetch current image path: {}", e));
+                        }
+                    };
+
+                    let file_path = IMAGES_PATH
+                        .join(uuid::Uuid::new_v4().to_string())
+                        .to_str();
+
+                    if file_path.is_none() {
+                        if let Err(rollback_err) = tx.rollback().await {
+                            log::error!("Failed to rollback transaction: {}", rollback_err);
+                        }
+                        return HttpResponse::InternalServerError()
+                                .body("Failed to generate valid file path");
+                    }
+                    let file_path = file_path.unwrap();
+
+                    let update_result = sqlx::query(&format!(
+                        "UPDATE {} \
+                        SET name = $1, surname = $2, group_id = $3, image_path = $4, image_type = $5 \
+                        WHERE id = $6",
+                        *STUDENT_TABLE_NAME
+                    ))
+                        .bind(&student_form.name)
+                        .bind(&student_form.surname)
+                        .bind(student_form.group_id)
+                        .bind(file_path)
+                        .bind(image_type)
+                        .bind(id.as_ref())
+                        .execute(&mut *tx)
+                        .await;
+
+                    match update_result {
+                        Ok(_) => {
+                            // Database update successful, now save the new file
+                            match tokio::fs::write(file_path, image_data).await {
+                                Ok(_) => {
+                                    // New file saved, commit transaction
+                                    if let Err(e) = tx.commit().await {
+                                        // Commit failed, clean up the new file
+                                        if let Err(cleanup_err) = tokio::fs::remove_file(file_path).await {
+                                            log::error!("Failed to clean up file after commit failure: {}", cleanup_err);
+                                        }
+                                        log::error!("Failed to commit transaction: {}", e);
+                                        return HttpResponse::InternalServerError()
+                                            .body(format!("Failed to commit transaction: {}", e));
+                                    }
+
+                                    // Everything succeeded, now safe to delete old file if it exists
+                                    if let Some(old_path) = current_path {
+                                        if let Err(e) = tokio::fs::remove_file(old_path).await {
+                                            log::warn!("Failed to delete old image file: {}", e);
+                                            // Non-critical error, operation still successful
+                                        }
+                                    }
+                                    log::info!("Successfully updated student id: {} with new image", id);
+                                    HttpResponse::Ok().finish()
+                                },
+                                Err(e) => {
+                                    // Failed to save new file, rollback transaction
+                                    if let Err(rollback_err) = tx.rollback().await {
+                                        log::error!("Failed to rollback transaction: {}", rollback_err);
+                                    }
+                                    log::error!("Failed to save new image file: {}", e);
+                                    HttpResponse::InternalServerError()
+                                        .body(format!("Failed to save new image file: {}", e))
+                                }
+                            }
+                        },
+                        Err(e) => {
+                            // Database update failed, rollback transaction
+                            if let Err(rollback_err) = tx.rollback().await {
+                                log::error!("Failed to rollback transaction: {}", rollback_err);
+                            }
+                            log::error!("Failed to update student record: {}", e);
+                            HttpResponse::InternalServerError().body(e.to_string())
+                        }
+                    }
+                },
+                None => {
+                    // Simple update without image change
+                    match sqlx::query(&format!(
+                        "UPDATE {} \
+                        SET name = $1, surname = $2, group_id = $3 \
+                        WHERE id = $4",
+                        *STUDENT_TABLE_NAME
+                    ))
+                        .bind(&student_form.name)
+                        .bind(&student_form.surname)
+                        .bind(student_form.group_id)
+                        .bind(id.as_ref())
+                        .execute(&mut *tx)
+                        .await
+                    {
+                        Ok(_) => {
+                            if let Err(e) = tx.commit().await {
+                                log::error!("Failed to commit transaction: {}", e);
+                                return HttpResponse::InternalServerError()
+                                    .body(format!("Failed to commit transaction: {}", e));
+                            }
+                            log::info!("Successfully updated student id: {}", id);
+                            HttpResponse::Ok().finish()
+                        },
+                        Err(e) => {
+                            if let Err(rollback_err) = tx.rollback().await {
+                                log::error!("Failed to rollback transaction: {}", rollback_err);
+                            }
+                            log::error!("Failed to update student: {}", e);
+                            HttpResponse::InternalServerError().body(e.to_string())
+                        }
+                    }
+                }
+            };
+
+            result
         }
     }
 }
 
 async fn delete_student(id: web::Path<i32>, pool: web::Data<PgPool>) -> impl Responder {
     log::debug!("Attempting to delete student with id: {}", id.as_ref());
-    match sqlx::query("DELETE FROM students WHERE id = $1")
+    let query = format!("DELETE FROM {} WHERE id = $1", *STUDENT_TABLE_NAME);
+    match sqlx::query(&query)
         .bind(id.as_ref())
         .execute(pool.get_ref())
         .await {
@@ -416,8 +759,8 @@ async fn delete_group(
     pool: web::Data<PgPool>
 ) -> impl Responder {
     log::debug!("Attempting to delete group with id: {}", id);
-
-    let count: i64 = match sqlx::query("SELECT COUNT(*) FROM students WHERE group_id = $1")
+    let query = format!("SELECT COUNT(*) FROM {} WHERE group_id = $1", *STUDENT_TABLE_NAME);
+    let count: i64 = match sqlx::query(&query)
         .bind(id.as_ref())
         .fetch_one(pool.get_ref())
         .await

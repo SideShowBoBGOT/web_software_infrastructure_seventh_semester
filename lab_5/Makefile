@@ -3,8 +3,6 @@ ifneq (,$(wildcard ./.env))
     export $(shell sed 's/=.*//' .env)
 endif
 
-REPO_ROOT:=$(CURDIR)/..
-
 .PHONY: all down restart clean rebuild print-env total-clean
 
 all: build
@@ -38,7 +36,6 @@ $(IMAGES_EXTERNAL_PATH):
 	mkdir -f $(IMAGES_EXTERNAL_PATH)
 
 build: | $(IMAGES_EXTERNAL_PATH)
-	chmod -R 755 $(REPO_ROOT)
 	docker-compose up --build
 
 down:

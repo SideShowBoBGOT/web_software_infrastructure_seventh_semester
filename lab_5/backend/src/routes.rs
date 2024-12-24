@@ -73,6 +73,12 @@ async fn process_multipart_fields(mut payload: Multipart) -> Result<StudentForm,
             "studentPhoto" => {
                 if let Some(content_type) = field.content_type() {
                     let image_type = content_type.to_string();
+
+                    if !matches!(image_type.as_str(), "image/jpeg" | "image/jpg" | "image/png") {
+                        return Err(HttpResponse::BadRequest()
+                            .body("Invalid image format. Only JPEG and PNG are supported."));
+                    }
+
                     let mut image_data = Vec::new();
 
                     while let Some(chunk) = field.next().await {
@@ -83,12 +89,36 @@ async fn process_multipart_fields(mut payload: Multipart) -> Result<StudentForm,
                         }
                     }
 
-                    if !image_data.is_empty() {
-                        student.image_data = Some((image_data, image_type));
-                    } else {
+                    if image_data.is_empty() {
                         return Err(HttpResponse::BadRequest()
                             .body("Empty image data received"));
                     }
+
+                    let format = match image::guess_format(&image_data) {
+                        Ok(format) => format,
+                        Err(e) => {
+                            return Err(HttpResponse::BadRequest()
+                                .body(format!("Invalid image data: {}", e)));
+                        }
+                    };
+
+                    let valid_format = match image_type.as_str() {
+                        "image/png" => format == image::ImageFormat::Png,
+                        "image/jpeg" | "image/jpg" => format == image::ImageFormat::Jpeg,
+                        _ => false
+                    };
+
+                    if !valid_format {
+                        return Err(HttpResponse::BadRequest()
+                            .body("Image format doesn't match the specified content type"));
+                    }
+
+                    if let Err(e) = image::load_from_memory(&image_data) {
+                        return Err(HttpResponse::BadRequest()
+                            .body(format!("Corrupted image data: {}", e)));
+                    }
+
+                    student.image_data = Some((image_data, image_type));
                 } else {
                     return Err(HttpResponse::BadRequest()
                         .body("Invalid image format. Content-Type is missing."));

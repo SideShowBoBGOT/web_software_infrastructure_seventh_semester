@@ -33,7 +33,7 @@ print-env:
 	echo BACKEND_PORT is $(BACKEND_PORT)
 
 $(IMAGES_EXTERNAL_PATH):
-	mkdir -f $(IMAGES_EXTERNAL_PATH)
+	-mkdir $(IMAGES_EXTERNAL_PATH)
 
 build: | $(IMAGES_EXTERNAL_PATH)
 	docker-compose up --build

@@ -609,18 +609,87 @@ async fn update_student(
 
 async fn delete_student(id: web::Path<i32>, pool: web::Data<PgPool>) -> impl Responder {
     log::debug!("Attempting to delete student with id: {}", id.as_ref());
-    let query = format!("DELETE FROM {} WHERE id = $1", *STUDENT_TABLE_NAME);
-    match sqlx::query(&query)
-        .bind(id.as_ref())
-        .execute(pool.get_ref())
-        .await {
-        Ok(_) => {
-            log::info!("Successfully deleted student with id: {}", id);
-            HttpResponse::Ok().finish()
+
+    match *STORAGE_TYPE {
+        StorageType::Blob => {
+            let query = format!("DELETE FROM {} WHERE id = $1", *STUDENT_TABLE_NAME);
+            match sqlx::query(&query)
+                .bind(id.as_ref())
+                .execute(pool.get_ref())
+                .await 
+            {
+                Ok(_) => {
+                    log::info!("Successfully deleted student with id: {}", id);
+                    HttpResponse::Ok().finish()
+                },
+                Err(e) => {
+                    log::error!("Failed to delete student: {}", e);
+                    HttpResponse::InternalServerError().body(e.to_string())
+                }
+            }
         },
-        Err(e) => {
-            log::error!("Failed to delete student: {}", e);
-            HttpResponse::InternalServerError().body(e.to_string())
+        StorageType::Filesystem => {
+            let mut tx = match pool.begin().await {
+                Ok(tx) => tx,
+                Err(e) => {
+                    log::error!("Failed to start transaction: {}", e);
+                    return HttpResponse::InternalServerError()
+                        .body(format!("Failed to start transaction: {}", e));
+                }
+            };
+
+            // First get the image path within transaction
+            let query = format!("SELECT image_path FROM {} WHERE id = $1", *STUDENT_TABLE_NAME);
+            let image_path: Option<String> = match sqlx::query(&query)
+                .bind(id.as_ref())
+                .fetch_optional(&mut *tx)
+                .await 
+            {
+                Ok(row) => row.and_then(|r| r.get("image_path")),
+                Err(e) => {
+                    if let Err(rollback_err) = tx.rollback().await {
+                        log::error!("Failed to rollback transaction: {}", rollback_err);
+                    }
+                    log::error!("Failed to fetch image path: {}", e);
+                    return HttpResponse::InternalServerError()
+                        .body(format!("Failed to fetch image path: {}", e));
+                }
+            };
+
+            // Delete from database first
+            let query = format!("DELETE FROM {} WHERE id = $1", *STUDENT_TABLE_NAME);
+            match sqlx::query(&query)
+                .bind(id.as_ref())
+                .execute(&mut *tx)
+                .await 
+            {
+                Ok(_) => {
+                    // Database deletion successful, commit transaction
+                    if let Err(e) = tx.commit().await {
+                        log::error!("Failed to commit transaction: {}", e);
+                        return HttpResponse::InternalServerError()
+                            .body(format!("Failed to commit transaction: {}", e));
+                    }
+
+                    // If there was an image, try to delete it
+                    if let Some(path) = image_path {
+                        if let Err(e) = tokio::fs::remove_file(path).await {
+                            log::warn!("Failed to delete image file: {}", e);
+                            // Non-critical error, student was deleted successfully
+                        }
+                    }
+
+                    log::info!("Successfully deleted student with id: {}", id);
+                    HttpResponse::Ok().finish()
+                },
+                Err(e) => {
+                    if let Err(rollback_err) = tx.rollback().await {
+                        log::error!("Failed to rollback transaction: {}", rollback_err);
+                    }
+                    log::error!("Failed to delete student: {}", e);
+                    HttpResponse::InternalServerError().body(e.to_string())
+                }
+            }
         }
     }
 }

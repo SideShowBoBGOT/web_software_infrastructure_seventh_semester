@@ -16,13 +16,12 @@
 <main>
     <section>
         <h2>Edit Student Information</h2>
+        <div>
+            <label for="currentPhoto">Current Photo:</label>
+            <img id="currentPhoto" src="/static/img/placeholder.png" alt="Current Student Photo" width="150">
+        </div>
         <form id="updateStudentForm" enctype="multipart/form-data">
             <input type="hidden" id="studentId" name="studentId">
-
-            <div>
-                <label for="currentPhoto">Current Photo:</label>
-                <img id="currentPhoto" src="/static/img/placeholder.png" alt="Current Student Photo" width="150">
-            </div>
 
             <div>
                 <label for="studentName">First Name:</label>

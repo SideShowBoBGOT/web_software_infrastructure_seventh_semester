@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Update Group - Student Management System</title>
+</head>
+<body>
+<header>
+    <h1>Update Group Information</h1>
+    <nav>
+        <a href="/groups">Back to Groups</a> |
+        <a href="/students">Students</a>
+    </nav>
+</header>
+
+<main>
+    <section>
+        <h2>Edit Group Information</h2>
+        <form id="updateGroupForm">
+            <input type="hidden" id="groupId" name="groupId">
+
+            <div>
+                <label for="groupName">Group Name:</label>
+                <input type="text" id="groupName" name="groupName" required>
+            </div>
+
+            <div>
+                <button type="submit">Update Group</button>
+                <button type="button" onclick="window.location.href='/groups'">Cancel</button>
+            </div>
+        </form>
+    </section>
+</main>
+
+<script src="/static/js/api.js"></script>
+<script src="/static/js/utils.js"></script>
+<script src="/static/js/managers/GroupUpdater.js"></script>
+<script>
+    const groupUpdater = new GroupUpdater();
+</script>
+</body>
+</html>

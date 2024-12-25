@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Groups - Student Management System</title>
+</head>
+<body>
+<header>
+    <h1>Student Management System</h1>
+    <nav>
+        <a href="/students">Students</a> |
+        <a href="/groups">Groups</a>
+    </nav>
+</header>
+
+<main>
+    <section>
+        <h2>Add New Group</h2>
+        <form id="addGroupForm">
+            <div>
+                <label for="groupName">Group Name:</label>
+                <input type="text" id="groupName" name="groupName" required>
+            </div>
+            <div>
+                <button type="submit">Add Group</button>
+            </div>
+        </form>
+    </section>
+
+    <section>
+        <h2>Group List</h2>
+        <table>
+            <thead>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Actions</th>
+            </tr>
+            </thead>
+            <tbody id="groupsTable"></tbody>
+        </table>
+    </section>
+</main>
+
+<script src="/static/js/api.js"></script>
+<script src="/static/js/utils.js"></script>
+<script src="/static/js/managers/GroupManager.js"></script>
+<script>
+    const groupManager = new GroupManager();
+</script>
+</body>
+</html>

@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Update Student - Student Management System</title>
+</head>
+<body>
+<header>
+    <h1>Update Student Information</h1>
+    <nav>
+        <a href="/students">Back to Students</a> |
+        <a href="/groups">Groups</a>
+    </nav>
+</header>
+
+<main>
+    <section>
+        <h2>Edit Student Information</h2>
+        <div>
+            <label for="currentPhoto">Current Photo:</label>
+            <img id="currentPhoto" src="/static/img/placeholder.png" alt="Current Student Photo" width="150">
+        </div>
+        <form id="updateStudentForm" enctype="multipart/form-data">
+            <input type="hidden" id="studentId" name="studentId">
+
+            <div>
+                <label for="studentName">First Name:</label>
+                <input type="text" id="studentName" name="studentName" required>
+            </div>
+
+            <div>
+                <label for="studentSurname">Last Name:</label>
+                <input type="text" id="studentSurname" name="studentSurname" required>
+            </div>
+
+            <div>
+                <label for="studentPhoto">New Photo (optional):</label>
+                <input type="file" id="studentPhoto" name="studentPhoto" accept="image/png, image/jpeg, image/jpg">
+            </div>
+
+            <div>
+                <label for="studentGroup">Group:</label>
+                <select id="studentGroup" name="studentGroup" required>
+                    <option value="">Select Group</option>
+                </select>
+            </div>
+
+            <div>
+                <button type="submit">Update Student</button>
+                <button type="button" onclick="window.location.href='/students'">Cancel</button>
+            </div>
+        </form>
+    </section>
+</main>
+
+<script src="/static/js/api.js"></script>
+<script src="/static/js/utils.js"></script>
+<script src="/static/js/validators/photoValidator.js"></script>
+<script src="/static/js/managers/StudentUpdater.js"></script>
+<script>
+    const studentUpdater = new StudentUpdater();
+</script>
+</body>
+</html>

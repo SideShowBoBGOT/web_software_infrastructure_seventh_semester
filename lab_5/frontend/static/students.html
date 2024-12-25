@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Students - Student Management System</title>
+</head>
+<body>
+<header>
+    <h1>Student Management System</h1>
+    <nav>
+        <a href="/students">Students</a> |
+        <a href="/groups">Groups</a>
+    </nav>
+</header>
+
+<main>
+    <section>
+        <h2>Add New Student</h2>
+        <form id="addStudentForm" enctype="multipart/form-data">
+            <div>
+                <label for="studentName">First Name:</label>
+                <input type="text" id="studentName" name="studentName" required>
+            </div>
+            <div>
+                <label for="studentSurname">Last Name:</label>
+                <input type="text" id="studentSurname" name="studentSurname" required>
+            </div>
+            <div>
+                <label for="studentPhoto">Photo:</label>
+                <input type="file" id="studentPhoto" name="studentPhoto" accept="image/png, image/jpeg, image/jpg">
+            </div>
+            <div>
+                <label for="studentGroup">Group:</label>
+                <select id="studentGroup" name="studentGroup" required>
+                    <option value="">Select Group</option>
+                </select>
+            </div>
+            <div>
+                <button type="submit">Add Student</button>
+            </div>
+        </form>
+    </section>
+
+    <section>
+        <h2>Student List</h2>
+        <div>
+            <label for="filterGroup">Filter by Group:</label>
+            <select id="filterGroup">
+                <option value="">All Groups</option>
+            </select>
+        </div>
+
+        <table>
+            <thead>
+            <tr>
+                <th>ID</th>
+                <th>Photo</th>
+                <th>First Name</th>
+                <th>Last Name</th>
+                <th>Group</th>
+                <th>Actions</th>
+            </tr>
+            </thead>
+            <tbody id="studentsTable"></tbody>
+        </table>
+    </section>
+</main>
+
+<script src="/static/js/api.js"></script>
+<script src="/static/js/utils.js"></script>
+<script src="/static/js/validators/photoValidator.js"></script>
+<script src="/static/js/managers/StudentManager.js"></script>
+<script>
+    const studentManager = new StudentManager();
+</script>
+</body>
+</html>
